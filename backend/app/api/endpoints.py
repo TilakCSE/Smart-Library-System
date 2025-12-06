@@ -56,3 +56,17 @@ def issue_book(
     session.commit()
     
     return {"status": "success", "message": f"Book issued to {user.full_name}", "due_date": new_transaction.due_date}
+
+@router.post("/books/add")
+def add_book(book_data: Book, session: Session = Depends(get_session)):
+    # 1. Check if ISBN already exists
+    existing_book = session.exec(select(Book).where(Book.isbn == book_data.isbn)).first()
+    if existing_book:
+        raise HTTPException(status_code=400, detail="Book with this ISBN already exists.")
+
+    # 2. Save to DB
+    session.add(book_data)
+    session.commit()
+    session.refresh(book_data)
+    
+    return {"status": "success", "book_id": book_data.id, "message": "Asset Registered in Vault"}
