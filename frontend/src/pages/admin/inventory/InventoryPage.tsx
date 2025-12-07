@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useInventoryStore } from "@/store/inventoryStore";
 import BookCard from "./BookCard";
@@ -8,9 +8,16 @@ import { Button } from "@/components/ui/button";
 import { Search, Plus, Filter, SlidersHorizontal } from "lucide-react";
 
 export default function InventoryPage() {
-  const books = useInventoryStore((state) => state.books);
+  const { books, fetchBooks } = useInventoryStore((state) => ({ 
+    books: state.books, 
+    fetchBooks: state.fetchBooks 
+  }));
   const [search, setSearch] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false); // State to control the modal
+
+  useEffect(() => {
+    fetchBooks();
+  }, []);
 
   // Filter books based on search query
   const filteredBooks = books.filter(book => 

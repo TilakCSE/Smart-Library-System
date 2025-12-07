@@ -6,10 +6,12 @@ import MobileNav from "@/components/MobileNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, Clock, AlertTriangle, ArrowRight, MapPin } from "lucide-react";
+import StudentSearchModal from "@/components/StudentSearchModal";
 
 export default function StudentDashboard() {
   const user = useAuthStore((state) => state.user);
   const [greeting, setGreeting] = useState("Good Morning");
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Dynamic Greeting based on time
   useEffect(() => {
@@ -104,7 +106,7 @@ export default function StudentDashboard() {
 
         {/* The "Crazy" Action Button - 3D Map */}
         <motion.div variants={item} className="mb-8">
-          <button className="w-full group relative overflow-hidden rounded-2xl bg-slate-900 p-1">
+          <button onClick={() => setIsSearchOpen(true)} className="w-full group relative overflow-hidden rounded-2xl bg-slate-900 p-1">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 opacity-20 group-hover:opacity-40 transition-opacity animate-shimmer bg-[length:200%_100%]"></div>
             <div className="relative flex items-center justify-between rounded-xl bg-slate-950 px-6 py-5 transition-transform active:scale-[0.98]">
               <div className="flex items-center gap-4">
@@ -147,6 +149,11 @@ export default function StudentDashboard() {
         </motion.div>
 
       </motion.div>
+
+      <StudentSearchModal 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+      />
 
       {/* Mobile Navigation Bar */}
       <MobileNav />
