@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { useAuthStore } from "@/store/AuthStore"; // Correct Capitalization
+import { useAuthStore } from "@/store/authStore"; // Correct Capitalization
 import DigitalID from "./DigitalID";
 import MobileNav from "@/components/MobileNav";
 import { Button } from "@/components/ui/button";
