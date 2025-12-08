@@ -9,13 +9,15 @@ app = FastAPI(title="Smart Library API")
 
 # --- CORS SETTINGS (Allow React to talk to Python) ---
 origins = [
-    "http://localhost:5173",    # Vite Localhost
-    "http://127.0.0.1:5173",    # Alternative Localhost
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "https://smart-library-system-orpin.vercel.app",  # <--- ADD YOUR VERCEL URL HERE
+    "https://smart-library-system.vercel.app"         # <--- Add this too just in case
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=origins,  # Alternatively, use ["*"] temporarily to allow ALL traffic
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
