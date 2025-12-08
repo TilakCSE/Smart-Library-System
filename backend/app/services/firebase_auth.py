@@ -2,18 +2,33 @@ import firebase_admin
 from firebase_admin import credentials, auth
 from app.core.config import settings
 import os
+import json
 
 # Initialize Firebase only once
 def initialize_firebase():
     try:
         # Check if already initialized to avoid errors on reload
         if not firebase_admin._apps:
-            # Construct full path to the json file
-            cred_path = os.path.join(os.getcwd(), settings.FIREBASE_CREDENTIALS)
             
-            cred = credentials.Certificate(cred_path)
+            # CHECK 1: Production Mode (Render/Vercel)
+            # We look for the JSON content inside the environment variable
+            firebase_json_str = os.getenv("FIREBASE_JSON")
+            
+            if firebase_json_str:
+                print("--- Firebase: Detected Production Environment Variable ---")
+                cred_dict = json.loads(firebase_json_str)
+                cred = credentials.Certificate(cred_dict)
+            
+            # CHECK 2: Local Mode (Laptop)
+            # We look for the physical file 'service-account.json'
+            else:
+                print("--- Firebase: Detected Local File Mode ---")
+                cred_path = os.path.join(os.getcwd(), settings.FIREBASE_CREDENTIALS)
+                cred = credentials.Certificate(cred_path)
+
             firebase_admin.initialize_app(cred)
             print("--- Firebase Admin Initialized Successfully ---")
+            
     except Exception as e:
         print(f"Error initializing Firebase: {e}")
 
