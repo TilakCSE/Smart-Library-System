@@ -11,13 +11,19 @@ app = FastAPI(title="Smart Library API")
 origins = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://smart-library-system-orpin.vercel.app",  # <--- ADD YOUR VERCEL URL HERE
-    "https://smart-library-system.vercel.app"         # <--- Add this too just in case
+    "https://smart-library-system.vercel.app",
+    "https://smart-library-system-orpin.vercel.app",
+    # ANDROID CAPACITOR ORIGINS
+    "https://localhost",
+    "http://localhost",
+    "capacitor://localhost",
+    # GLOBAL WILDCARD (The Nuclear Option - Guaranteed to work)
+    "*"
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # <--- CHANGE THIS TO "*"
+    allow_origins=origins, # Ensure this variable is passed here
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
