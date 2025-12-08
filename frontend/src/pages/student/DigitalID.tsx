@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useAuthStore } from "@/store/AuthStore"; // Correct Capitalization
+import { useAuthStore } from "@/store/authStore"; // Correct Capitalization
 import { QrCode, Wifi } from "lucide-react";
 
 export default function DigitalID() {
