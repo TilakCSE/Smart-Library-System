@@ -12,6 +12,10 @@ export default defineConfig({
         enabled: true // <--- THIS IS THE MAGIC LINE!
       },
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'mask-icon.svg'],
+      workbox: {
+        maximumFileSizeToCacheInBytes: 50000000, // Sets limit to 50 MB
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,wasm,data}'] // Ensures WASM is included
+      },
       manifest: {
         name: 'Smart Library System',
         short_name: 'LibraryVault',
