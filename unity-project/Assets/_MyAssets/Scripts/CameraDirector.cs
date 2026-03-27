@@ -4,58 +4,64 @@ public class CameraDirector : MonoBehaviour
 {
     [Header("Targets")]
     public Transform agentTarget;
-    public Transform gateOverviewPoint;
 
     [Header("Settings")]
-    // Try these default values first!
-    public Vector3 followOffset = new Vector3(0, 5, -7);
-    public float positionSmoothTime = 0.5f; // Higher = Smoother/Slower lag
-    public float rotationSmoothSpeed = 2.0f;
+    public float distance = 3.5f;
+    public float heightOffset = 1.2f;
+    public float positionSmoothTime = 0.15f;
 
-    private bool isReviewingPath = false;
-    private Vector3 currentVelocity; // Helper for smoothing
+    [Header("Mobile Swipe Settings")]
+    public float swipeSensitivityX = 4.0f;
+    public float swipeSensitivityY = 3.0f;
+    public float minYAngle = -5f;
+    public float maxYAngle = 70f;
+
+    [Header("Collision Settings")]
+    public LayerMask collisionLayers; // Tells the camera what to bounce off of
+    public float collisionBuffer = 0.2f; // Keeps the camera from scraping the paint
+
+    private Vector3 currentVelocity;
+    private float currentRotX;
+    private float currentRotY = 15f;
+
+    void Start()
+    {
+        if (agentTarget) currentRotX = agentTarget.eulerAngles.y;
+    }
 
     void LateUpdate()
     {
-        if (agentTarget == null || gateOverviewPoint == null) return;
+        if (agentTarget == null) return;
 
-        Vector3 targetPos;
-        Quaternion targetRot;
-
-        if (isReviewingPath)
+        if (Input.GetMouseButton(0))
         {
-            // STATE B: OVERVIEW
-            targetPos = gateOverviewPoint.position;
-            Vector3 directionToAgent = agentTarget.position - transform.position;
-            targetRot = Quaternion.LookRotation(directionToAgent);
-        }
-        else
-        {
-            // STATE A: SMOOTH CHASE
-
-            // 1. Calculate desired position (Behind player)
-            // TransformPoint keeps it locked to agent's rotation, but we smooth the movement
-            Vector3 desiredWorldPos = agentTarget.TransformPoint(followOffset);
-
-            // 2. Use SmoothDamp for the position (Removes the jitter)
-            targetPos = Vector3.SmoothDamp(transform.position, desiredWorldPos, ref currentVelocity, positionSmoothTime);
-
-            // 3. Look at the agent's head, but do it lazily
-            Vector3 lookAtPoint = agentTarget.position + (Vector3.up * 1.5f);
-            Vector3 direction = lookAtPoint - transform.position;
-
-            // Prevent error if direction is zero
-            if (direction != Vector3.zero)
-                targetRot = Quaternion.LookRotation(direction);
-            else
-                targetRot = transform.rotation;
+            currentRotX += Input.GetAxis("Mouse X") * swipeSensitivityX;
+            currentRotY -= Input.GetAxis("Mouse Y") * swipeSensitivityY;
+            currentRotY = Mathf.Clamp(currentRotY, minYAngle, maxYAngle);
         }
 
-        // Apply
-        transform.position = targetPos;
-        transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * rotationSmoothSpeed);
+        Quaternion rotation = Quaternion.Euler(currentRotY, currentRotX, 0);
+        Vector3 offset = rotation * new Vector3(0, 0, -distance);
+
+        Vector3 targetHeight = agentTarget.position + (Vector3.up * heightOffset);
+        Vector3 desiredPos = targetHeight + offset;
+
+        // --- NEW COLLISION LOGIC ---
+        RaycastHit hit;
+        // Shoot an invisible line from the agent's head to where the camera WANTS to be
+        if (Physics.Linecast(targetHeight, desiredPos, out hit, collisionLayers))
+        {
+            // If the line hits a wall, pull the camera forward to the hit point!
+            desiredPos = hit.point + (targetHeight - desiredPos).normalized * collisionBuffer;
+        }
+        // ---------------------------
+
+        transform.position = Vector3.SmoothDamp(transform.position, desiredPos, ref currentVelocity, positionSmoothTime);
+        transform.LookAt(targetHeight);
     }
 
-    public void SwitchToOverviewMode() { isReviewingPath = true; }
-    public void SwitchToFollowMode() { isReviewingPath = false; }
+    public void AutoTiltForArrival()
+    {
+        currentRotY = 5f;
+    }
 }

@@ -10,10 +10,12 @@ public class LibraryController : MonoBehaviour
     public GameObject skyBeam;
     public CameraDirector cameraDirector;
 
-    [Header("Settings")]
-    public float stopDistance = 1.5f;
-
     private bool isMoving = false;
+    private Transform currentTargetRack;
+
+    // NEW: Stores the location sent from React until the user taps
+    private string pendingTarget = "";
+
     public static LibraryController Instance;
 
     void Awake()
@@ -21,10 +23,8 @@ public class LibraryController : MonoBehaviour
         Instance = this;
         gameObject.name = "LibraryManager";
 
-        // FIX: Ensure components are grabbed immediately
         if (agent == null) agent = GetComponent<NavMeshAgent>();
 
-        // FIX: Disable visuals HERE (Before React can send any commands)
         if (pathTrail) pathTrail.enabled = false;
         if (headSpotlight) headSpotlight.enabled = false;
         if (skyBeam) skyBeam.SetActive(false);
@@ -32,41 +32,35 @@ public class LibraryController : MonoBehaviour
 
     void Start()
     {
-        // Only grab the camera here as it might not be ready in Awake
-        if (cameraDirector == null) cameraDirector = Camera.main.GetComponent<CameraDirector>();
+        if (cameraDirector == null && Camera.main != null)
+        {
+            cameraDirector = Camera.main.GetComponent<CameraDirector>();
+        }
     }
 
-    public void GoToLocation(string locationID)
+    // React calls this! It no longer moves the agent, just queues the destination.
+    public void GoToLocation(string fullLocationID)
     {
-        GameObject targetInfo = GameObject.Find(locationID);
-
-        if (targetInfo != null)
-        {
-            isMoving = true;
-
-            // VISUALS: Turn ON
-            if (headSpotlight) headSpotlight.enabled = false;
-            if (skyBeam) skyBeam.SetActive(false);
-
-            if (pathTrail)
-            {
-                pathTrail.Clear();
-                pathTrail.enabled = true; // This will now STAY true
-            }
-
-            if (cameraDirector) cameraDirector.SwitchToFollowMode();
-
-            agent.SetDestination(targetInfo.transform.position);
-            agent.stoppingDistance = stopDistance;
-        }
-        else
-        {
-            Debug.LogError("Location not found: " + locationID);
-        }
+        pendingTarget = fullLocationID;
+        Debug.Log("Target Queued from React: " + pendingTarget + ". Waiting for user input...");
     }
 
     void Update()
     {
+        // --- NEW INPUT LOGIC ---
+        // Checks for Spacebar, Mouse Click, or Mobile Screen Tap
+        bool isInputTriggered = Input.GetKeyDown(KeyCode.Space) ||
+                                Input.GetMouseButtonDown(0) ||
+                                (Input.touchCount > 0 && Input.GetTouch(0).phase == TouchPhase.Began);
+
+        // If the user tapped AND React has sent us a target string
+        if (isInputTriggered && !string.IsNullOrEmpty(pendingTarget))
+        {
+            ExecuteMovement(pendingTarget);
+            pendingTarget = ""; // Clear the queue so it doesn't fire twice!
+        }
+        // -----------------------
+
         if (isMoving && !agent.pathPending)
         {
             float dist = agent.remainingDistance;
@@ -77,13 +71,76 @@ public class LibraryController : MonoBehaviour
         }
     }
 
+    // All the heavy 48-Shelf parsing logic was moved down here
+    private void ExecuteMovement(string targetID)
+    {
+        string[] parts = targetID.Split('_');
+
+        if (parts.Length < 4)
+        {
+            Debug.LogError("Error: Expected format Rack_X_Shelf_Y");
+            return;
+        }
+
+        string rackName = parts[0] + "_" + parts[1];
+        int shelfNumber = int.Parse(parts[3]);
+
+        GameObject rackObject = GameObject.Find(rackName);
+
+        if (rackObject != null)
+        {
+            currentTargetRack = rackObject.transform;
+            isMoving = true;
+
+            if (headSpotlight) headSpotlight.enabled = false;
+            if (skyBeam) skyBeam.SetActive(false);
+            if (pathTrail)
+            {
+                pathTrail.Clear();
+                pathTrail.enabled = true;
+            }
+
+            Transform targetPoint;
+            if (shelfNumber <= 24)
+            {
+                targetPoint = rackObject.transform.Find("Front_Point");
+            }
+            else
+            {
+                targetPoint = rackObject.transform.Find("Back_Point");
+            }
+
+            if (targetPoint != null)
+            {
+                agent.SetDestination(targetPoint.position);
+                agent.stoppingDistance = 0.1f;
+            }
+            else
+            {
+                Debug.LogError("Could not find Front_Point or Back_Point in " + rackName);
+            }
+        }
+        else
+        {
+            Debug.LogError("Rack not found: " + rackName);
+        }
+    }
+
     private void ArrivedAtDestination()
     {
         if (!isMoving) return;
         isMoving = false;
 
+        if (currentTargetRack != null)
+        {
+            Vector3 lookDirection = currentTargetRack.position - agent.transform.position;
+            lookDirection.y = 0;
+            agent.transform.rotation = Quaternion.LookRotation(lookDirection);
+        }
+
         if (skyBeam) skyBeam.SetActive(true);
         if (headSpotlight) headSpotlight.enabled = true;
-        if (cameraDirector) cameraDirector.SwitchToOverviewMode();
+
+        if (cameraDirector) cameraDirector.AutoTiltForArrival();
     }
 }
