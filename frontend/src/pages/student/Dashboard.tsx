@@ -18,20 +18,14 @@ export default function StudentDashboard() {
   const [greeting, setGreeting] = useState("Good Morning");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
+  // 1. THE PROTECTOR: Kick to login if not authenticated and loading has finished
   useEffect(() => {
-    // Only redirect if auth is fully initialized AND there's no user
     if (!isAuthLoading && !user) {
       navigate('/login');
     }
   }, [user, isAuthLoading, navigate]);
 
-  useEffect(() => {
-    if (user?.email) {
-      fetchTransactions(user.email);
-    }
-  }, [fetchTransactions, user?.email]);
-
-  // Dynamic Greeting based on time
+  // 2. DYNAMIC GREETING: Based on the user's local time
   useEffect(() => {
     const hour = new Date().getHours();
     if (hour < 12) setGreeting("Good Morning");
@@ -39,7 +33,7 @@ export default function StudentDashboard() {
     else setGreeting("Good Evening");
   }, []);
 
-  // Fetch the transactions on mount using the real authenticated user
+  // 3. THE DATA FETCHER: Fetch the transactions exactly ONCE when the user loads in
   useEffect(() => {
     if (user?.email) {
       fetchTransactions(user.email);
@@ -73,14 +67,14 @@ export default function StudentDashboard() {
   return (
     <div className="min-h-screen bg-slate-50 pb-24 relative overflow-x-hidden selection:bg-blue-500/20">
 
-      {/* Auth Loading State */}
+      {/* Auth Loading Overlay (Survives Ctrl+R Reloads) */}
       {isAuthLoading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-50/90 backdrop-blur-sm">
           <div className="flex flex-col items-center justify-center space-y-4">
             <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
             <div className="text-center">
-              <p className="text-lg font-semibold text-slate-900">Restoring Your Session</p>
-              <p className="text-sm text-slate-500">Authenticating with Firebase...</p>
+              <p className="text-lg font-bold text-slate-900">Restoring Digital Vault</p>
+              <p className="text-sm text-slate-500">Authenticating connection...</p>
             </div>
           </div>
         </div>
@@ -100,11 +94,12 @@ export default function StudentDashboard() {
         <motion.div variants={item} className="flex justify-between items-center mb-6 text-white">
           <div>
             <p className="text-blue-200 text-sm font-medium tracking-wide">{greeting}</p>
-            <h1 className="text-2xl font-bold tracking-tight">
-              {user?.email?.split('@')[0] || "Demo Student"}
+            <h1 className="text-2xl font-bold tracking-tight capitalize">
+              {/* Intelligent Name Fallback */}
+              {user ? (user.displayName || user.email?.split('@')[0] || "Student") : "Authenticating..."}
             </h1>
           </div>
-          <div className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">
+          <div className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner">
             <span className="text-lg">🎓</span>
           </div>
         </motion.div>
@@ -121,7 +116,7 @@ export default function StudentDashboard() {
              <CardContent className="p-4 flex flex-col items-center justify-center text-center">
                 <BookOpen className="w-5 h-5 text-blue-500 mb-2 group-hover:scale-110 transition-transform" />
                 <span className="text-2xl font-bold text-slate-900">
-                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin my-1.5" /> : activeBooks.length}
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin my-1.5 text-slate-300" /> : activeBooks.length}
                 </span>
                 <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Issued</span>
              </CardContent>
@@ -132,7 +127,7 @@ export default function StudentDashboard() {
              <CardContent className="p-4 flex flex-col items-center justify-center text-center">
                 <Clock className={`w-5 h-5 mb-2 group-hover:scale-110 transition-transform ${daysUntilDue < 0 ? 'text-red-500' : 'text-orange-500'}`} />
                 <span className={`text-2xl font-bold ${daysUntilDue < 0 ? 'text-red-600' : 'text-slate-900'}`}>
-                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin my-1.5" /> : activeBooks.length === 0 ? '-' : daysUntilDue < 0 ? 'Late' : `${daysUntilDue}d`}
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin my-1.5 text-slate-300" /> : activeBooks.length === 0 ? '-' : daysUntilDue < 0 ? 'Late' : `${daysUntilDue}d`}
                 </span>
                 <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Due In</span>
              </CardContent>
@@ -143,14 +138,14 @@ export default function StudentDashboard() {
              <CardContent className="p-4 flex flex-col items-center justify-center text-center">
                 <AlertTriangle className={`w-5 h-5 mb-2 group-hover:scale-110 transition-transform ${overdueCount > 0 ? 'text-red-500' : 'text-green-500'}`} />
                 <span className={`text-2xl font-bold ${overdueCount > 0 ? 'text-red-600' : 'text-slate-900'}`}>
-                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin my-1.5" /> : `$${overdueCount * 5}`}
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin my-1.5 text-slate-300" /> : `$${overdueCount * 5}`}
                 </span>
                 <span className="text-[10px] text-slate-500 uppercase font-bold tracking-wider">Fines</span>
              </CardContent>
           </Card>
         </motion.div>
 
-        {/* The "Crazy" Action Button - 3D Map */}
+        {/* The Action Button - 3D Map */}
         <motion.div variants={item} className="mb-8">
           <button onClick={() => setIsSearchOpen(true)} className="w-full group relative overflow-hidden rounded-2xl bg-slate-900 p-1">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 opacity-20 group-hover:opacity-40 transition-opacity animate-shimmer bg-[length:200%_100%]"></div>
@@ -169,7 +164,7 @@ export default function StudentDashboard() {
           </button>
         </motion.div>
 
-        {/* NEW: Currently Issued Section */}
+        {/* Currently Issued Section */}
         {!isLoading && activeBooks.length > 0 && (
           <motion.div variants={item} className="mb-8">
             <div className="flex justify-between items-center mb-4 px-1">
@@ -214,7 +209,7 @@ export default function StudentDashboard() {
                  <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
                  <div>
                    <p className="text-sm font-bold text-slate-700">Connecting to Digital Vault...</p>
-                   <p className="text-xs text-slate-500">Waking up cloud servers. This may take up to 50 seconds.</p>
+                   <p className="text-xs text-slate-500">Retrieving ledger history.</p>
                  </div>
                </div>
              ) : pastBooks.length === 0 ? (

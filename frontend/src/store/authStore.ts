@@ -5,6 +5,7 @@ import { auth } from '@/lib/firebase';
 interface User {
   uid: string;
   email: string | null;
+  displayName: string | null; // <--- 1. ADD THIS HERE
   accessToken: string;
 }
 
@@ -27,22 +28,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => set({ user: null }),
 
   initializeAuth: () => {
-    // Set up Firebase auth persistence listener
     onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // User is logged in – restore from Firebase
         const token = await firebaseUser.getIdToken();
         set({
           user: {
             uid: firebaseUser.uid,
             email: firebaseUser.email,
+            displayName: firebaseUser.displayName, // <--- 2. ADD THIS HERE
             accessToken: token,
           },
           isAuthLoading: false,
           isInitialized: true,
         });
       } else {
-        // User is logged out
         set({
           user: null,
           isAuthLoading: false,

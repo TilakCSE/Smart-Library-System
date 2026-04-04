@@ -18,10 +18,11 @@ origins = [
     "capacitor://localhost",
 ]
 
+# The Nuclear CORS Setup for Firebase Token Auth
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins, 
-    allow_credentials=True,
+    allow_origins=["*"],      # Open the floodgates, Vercel is welcome here
+    allow_credentials=False,  # <-- THIS IS THE MAGIC KEY. We don't use cookies!
     allow_methods=["*"],
     allow_headers=["*"],
 )
