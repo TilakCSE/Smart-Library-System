@@ -1,19 +1,35 @@
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
 import { useAuthStore } from "@/store/authStore";
-import { useStudentStore } from "@/store/studentStore"; // <-- Imported our new store
+import { useStudentStore } from "@/store/studentStore";
 import DigitalID from "./DigitalID";
 import MobileNav from "@/components/MobileNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { BookOpen, Clock, AlertTriangle, ArrowRight, MapPin, Loader2 } from "lucide-react";
 import StudentSearchModal from "@/components/StudentSearchModal";
+import { useNavigate } from "react-router-dom";
 
 export default function StudentDashboard() {
+  const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
   const { transactions, fetchTransactions, isLoading } = useStudentStore();
   const [greeting, setGreeting] = useState("Good Morning");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  useEffect(() => {
+    // Give Firebase a tiny window to load, but if there's no user, boot them.
+    const timer = setTimeout(() => {
+      if (!user) navigate('/login');
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [user, navigate]);
+
+  useEffect(() => {
+    if (user?.email) {
+      fetchTransactions(user.email);
+    }
+  }, [fetchTransactions, user?.email]);
 
   // Dynamic Greeting based on time
   useEffect(() => {
@@ -23,7 +39,7 @@ export default function StudentDashboard() {
     else setGreeting("Good Evening");
   }, []);
 
-  // Fetch the transactions on mount (Using the demo student to show off the data!)
+  // Fetch the transactions on mount using the real authenticated user
   useEffect(() => {
     if (user?.email) {
       fetchTransactions(user.email);
@@ -65,12 +81,7 @@ export default function StudentDashboard() {
       </div>
 
       {/* Main Content Container */}
-      <motion.div 
-        variants={container}
-        initial="hidden"
-        animate="show"
-        className="relative z-10 px-6 pt-8 max-w-md mx-auto lg:max-w-4xl"
-      >
+      <motion.div variants={container} initial="hidden" animate="show" className="relative z-10 px-6 pt-8 max-w-md mx-auto lg:max-w-4xl">
         
         {/* Header Section */}
         <motion.div variants={item} className="flex justify-between items-center mb-6 text-white">
@@ -90,7 +101,7 @@ export default function StudentDashboard() {
           <DigitalID />
         </div>
 
-        {/* Stats Grid - Now Data-Driven! */}
+        {/* Stats Grid */}
         <motion.div variants={item} className="grid grid-cols-3 gap-3 mb-8">
           <Card className="border-0 shadow-lg shadow-blue-900/5 bg-white overflow-hidden relative group">
              <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
@@ -146,7 +157,7 @@ export default function StudentDashboard() {
         </motion.div>
 
         {/* NEW: Currently Issued Section */}
-        {activeBooks.length > 0 && (
+        {!isLoading && activeBooks.length > 0 && (
           <motion.div variants={item} className="mb-8">
             <div className="flex justify-between items-center mb-4 px-1">
               <h2 className="text-lg font-bold text-slate-900">Currently Issued</h2>
@@ -154,23 +165,16 @@ export default function StudentDashboard() {
             <div className="space-y-3">
               {activeBooks.map((tx) => (
                 <div key={tx.id} className="flex items-center gap-4 p-4 bg-white rounded-xl shadow-sm border border-slate-100 relative overflow-hidden group">
-                  {/* Status Color Bar */}
                   <div className={`absolute left-0 top-0 w-1 h-full ${tx.status === 'overdue' ? 'bg-red-500' : 'bg-blue-500'}`}></div>
-                  
-                  {/* Book Cover */}
                   <div className="w-12 h-16 bg-slate-200 rounded-md overflow-hidden flex-shrink-0 shadow-sm border border-slate-100">
                     <img src={tx.cover_image_url} alt={tx.book_title} className="w-full h-full object-cover" />
                   </div>
-                  
-                  {/* Details */}
                   <div className="flex-1 min-w-0">
                     <h4 className="font-semibold text-slate-900 text-sm truncate">{tx.book_title}</h4>
                     <p className={`text-xs ${tx.status === 'overdue' ? 'text-red-500 font-bold' : 'text-slate-500'}`}>
                       Due: {new Date(tx.due_date).toLocaleDateString()}
                     </p>
                   </div>
-
-                  {/* Badge */}
                   <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full whitespace-nowrap ${
                     tx.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-blue-100 text-blue-700'
                   }`}>
@@ -182,18 +186,24 @@ export default function StudentDashboard() {
           </motion.div>
         )}
 
-        {/* Recent Activity List - Now Data-Driven! */}
+        {/* Recent Activity List */}
         <motion.div variants={item}>
           <div className="flex justify-between items-center mb-4 px-1">
             <h2 className="text-lg font-bold text-slate-900">Recent Activity</h2>
-            {pastBooks.length > 0 && (
+            {!isLoading && pastBooks.length > 0 && (
               <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700">View All</Button>
             )}
           </div>
           
           <div className="space-y-3">
              {isLoading ? (
-               <div className="py-4 flex justify-center"><Loader2 className="w-6 h-6 text-slate-400 animate-spin" /></div>
+               <div className="py-8 flex flex-col items-center justify-center text-center space-y-3 bg-white rounded-xl border border-slate-100 shadow-sm">
+                 <Loader2 className="w-8 h-8 text-blue-500 animate-spin" />
+                 <div>
+                   <p className="text-sm font-bold text-slate-700">Connecting to Digital Vault...</p>
+                   <p className="text-xs text-slate-500">Waking up cloud servers. This may take up to 50 seconds.</p>
+                 </div>
+               </div>
              ) : pastBooks.length === 0 ? (
                <p className="text-sm text-slate-500 px-2">No recent activity.</p>
              ) : pastBooks.map((tx) => (
@@ -215,12 +225,7 @@ export default function StudentDashboard() {
 
       </motion.div>
 
-      <StudentSearchModal 
-        isOpen={isSearchOpen} 
-        onClose={() => setIsSearchOpen(false)} 
-      />
-
-      {/* Mobile Navigation Bar */}
+      <StudentSearchModal isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
       <MobileNav />
     </div>
   );
