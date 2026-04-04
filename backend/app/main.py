@@ -13,20 +13,14 @@ origins = [
     "http://127.0.0.1:5173",
     "https://smart-library-system.vercel.app",
     "https://smart-library-system-orpin.vercel.app",
-    # ANDROID CAPACITOR ORIGINS
     "https://localhost",
     "http://localhost",
     "capacitor://localhost",
-    # GLOBAL WILDCARD (The Nuclear Option - Guaranteed to work)
-    "*"
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173", # Keep this for future local dev
-        "https://smart-library-system-orpin.vercel.app/" # <--- ADD YOUR VERCEL URL HERE
-    ],
+    allow_origins=origins, 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

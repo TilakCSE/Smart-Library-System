@@ -28,7 +28,8 @@ export const useStudentStore = create<StudentState>((set) => ({
       set({ transactions: response.data, isLoading: false });
     } catch (error) {
       console.error("Failed to fetch transactions:", error);
-      set({ isLoading: false });
+      // THE FIX: Force the spinner to turn off if Axios fails
+      set({ isLoading: false, transactions: [] }); 
     }
   }
 }));
