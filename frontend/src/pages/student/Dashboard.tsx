@@ -13,17 +13,17 @@ import { useNavigate } from "react-router-dom";
 export default function StudentDashboard() {
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const isAuthLoading = useAuthStore((state) => state.isAuthLoading);
   const { transactions, fetchTransactions, isLoading } = useStudentStore();
   const [greeting, setGreeting] = useState("Good Morning");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {
-    // Give Firebase a tiny window to load, but if there's no user, boot them.
-    const timer = setTimeout(() => {
-      if (!user) navigate('/login');
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [user, navigate]);
+    // Only redirect if auth is fully initialized AND there's no user
+    if (!isAuthLoading && !user) {
+      navigate('/login');
+    }
+  }, [user, isAuthLoading, navigate]);
 
   useEffect(() => {
     if (user?.email) {
@@ -72,7 +72,20 @@ export default function StudentDashboard() {
 
   return (
     <div className="min-h-screen bg-slate-50 pb-24 relative overflow-x-hidden selection:bg-blue-500/20">
-      
+
+      {/* Auth Loading State */}
+      {isAuthLoading && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/80 backdrop-blur-sm">
+          <div className="flex flex-col items-center justify-center space-y-4">
+            <Loader2 className="w-12 h-12 text-blue-500 animate-spin" />
+            <div className="text-center">
+              <p className="text-lg font-semibold text-slate-900">Restoring Your Session</p>
+              <p className="text-sm text-slate-500">Authenticating with Firebase...</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Background Decor */}
       <div className="absolute top-0 left-0 w-full h-64 bg-slate-900 rounded-b-[40px] z-0 overflow-hidden">
          <div className="absolute inset-0 opacity-20 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:24px_24px]"></div>
