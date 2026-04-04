@@ -23,7 +23,10 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins, # Ensure this variable is passed here
+    allow_origins=[
+        "http://localhost:5173", # Keep this for future local dev
+        "https://smart-library-system-orpin.vercel.app/" # <--- ADD YOUR VERCEL URL HERE
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

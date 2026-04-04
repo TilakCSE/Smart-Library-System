@@ -71,3 +71,12 @@ class GateLog(SQLModel, table=True):
     status: str # 'granted', 'denied'
     denial_reason: Optional[str] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+# OUTDENTED CORRECTLY: This is its own standalone table now!
+class SearchLog(SQLModel, table=True):
+    __tablename__ = "search_logs"
+    id: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    search_query: str
+    target_unity_location_id: Optional[str] = None
+    user_id: Optional[str] = None
