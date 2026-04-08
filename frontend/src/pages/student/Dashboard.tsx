@@ -17,6 +17,10 @@ export default function StudentDashboard() {
   const { transactions, fetchTransactions, isLoading } = useStudentStore();
   const [greeting, setGreeting] = useState("Good Morning");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+  const [secretClicks, setSecretClicks] = useState(0);
+  const [devModeUnlocked, setDevModeUnlocked] = useState(false);
 
   // 1. THE PROTECTOR: Kick to login if not authenticated and loading has finished
   useEffect(() => {
@@ -64,6 +68,78 @@ export default function StudentDashboard() {
     show: { y: 0, opacity: 1 }
   };
 
+  // NUV Library Exact Coordinates
+  const LIBRARY_COORDS = { lat: 22.3188, lng: 73.1709 }; 
+  const GEOFENCE_RADIUS_METERS = 50;
+
+  // The Haversine Formula (Calculates distance between two GPS coordinates)
+  const getDistanceInMeters = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371e3; // Earth's radius in meters
+    const rad = Math.PI / 180;
+    const dLat = (lat2 - lat1) * rad;
+    const dLon = (lon2 - lon1) * rad;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * rad) * Math.cos(lat2 * rad) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+  };
+
+  const handleSecretTap = () => {
+    const newCount = secretClicks + 1;
+    setSecretClicks(newCount);
+    if (newCount === 5) {
+      setDevModeUnlocked(true);
+      setLocationError("🔓 DEV MODE: Geofence bypassed.");
+      // Optional: Reset count after unlocking if you want
+    }
+  };
+
+  // The Gatekeeper Function
+  const handleLaunch3DMap = () => {
+    setIsLocating(true);
+    setLocationError(null);
+
+    // THE BACKDOOR CHECK
+    if (devModeUnlocked) {
+      setIsLocating(false);
+      setIsSearchOpen(true);
+      return; // Skip all GPS math!
+    }
+
+    if (!navigator.geolocation) {
+      setLocationError("GPS is not supported by your browser.");
+      setIsLocating(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const studentLat = position.coords.latitude;
+        const studentLng = position.coords.longitude;
+        
+        const distance = getDistanceInMeters(
+          LIBRARY_COORDS.lat, LIBRARY_COORDS.lng, 
+          studentLat, studentLng
+        );
+
+        setIsLocating(false);
+
+        if (distance <= GEOFENCE_RADIUS_METERS) {
+          setIsSearchOpen(true); 
+        } else {
+          setLocationError(`Access Denied: You are ${Math.round(distance)}m away from the library.`);
+        }
+      },
+      (error) => {
+        setIsLocating(false);
+        if (error.code === 1) setLocationError("You must allow location access to use the 3D Map.");
+        else setLocationError("Failed to get your location. Try again.");
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 pb-24 relative overflow-x-hidden selection:bg-blue-500/20">
 
@@ -95,11 +171,14 @@ export default function StudentDashboard() {
           <div>
             <p className="text-blue-200 text-sm font-medium tracking-wide">{greeting}</p>
             <h1 className="text-2xl font-bold tracking-tight capitalize">
-              {/* Intelligent Name Fallback */}
               {user ? (user.displayName || user.email?.split('@')[0] || "Student") : "Authenticating..."}
             </h1>
           </div>
-          <div className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner">
+          {/* ADD THE ONCLICK HERE */}
+          <div 
+            onClick={handleSecretTap}
+            className="h-10 w-10 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shadow-inner cursor-pointer"
+          >
             <span className="text-lg">🎓</span>
           </div>
         </motion.div>
@@ -147,21 +226,38 @@ export default function StudentDashboard() {
 
         {/* The Action Button - 3D Map */}
         <motion.div variants={item} className="mb-8">
-          <button onClick={() => setIsSearchOpen(true)} className="w-full group relative overflow-hidden rounded-2xl bg-slate-900 p-1">
+          <button 
+            onClick={handleLaunch3DMap} 
+            disabled={isLocating}
+            className="w-full group relative overflow-hidden rounded-2xl bg-slate-900 p-1 disabled:opacity-70 disabled:cursor-not-allowed"
+          >
             <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-purple-600 to-blue-600 opacity-20 group-hover:opacity-40 transition-opacity animate-shimmer bg-[length:200%_100%]"></div>
             <div className="relative flex items-center justify-between rounded-xl bg-slate-950 px-6 py-5 transition-transform active:scale-[0.98]">
               <div className="flex items-center gap-4">
                 <div className="h-12 w-12 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-400 group-hover:text-white group-hover:bg-blue-500 transition-colors">
-                  <MapPin className="w-6 h-6" />
+                  {isLocating ? <Loader2 className="w-6 h-6 animate-spin" /> : <MapPin className="w-6 h-6" />}
                 </div>
                 <div className="text-left">
-                   <h3 className="text-lg font-bold text-white">Launch 3D Map</h3>
+                   <h3 className="text-lg font-bold text-white">
+                     {isLocating ? "Verifying Location..." : "Launch 3D Map"}
+                   </h3>
                    <p className="text-sm text-slate-400">Navigate the library in real-time</p>
                 </div>
               </div>
               <ArrowRight className="text-slate-500 group-hover:translate-x-1 group-hover:text-white transition-all" />
             </div>
           </button>
+          
+          {/* Error Message Display */}
+          {locationError && (
+            <motion.p 
+              initial={{ opacity: 0, y: -10 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              className="text-red-500 text-sm font-semibold mt-3 text-center bg-red-50 py-2 rounded-lg border border-red-100"
+            >
+              {locationError}
+            </motion.p>
+          )}
         </motion.div>
 
         {/* Currently Issued Section */}
