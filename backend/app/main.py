@@ -13,18 +13,16 @@ origins = [
     "http://127.0.0.1:5173",
     "https://smart-library-system.vercel.app",
     "https://smart-library-system-orpin.vercel.app",
-    # ANDROID CAPACITOR ORIGINS
     "https://localhost",
     "http://localhost",
     "capacitor://localhost",
-    # GLOBAL WILDCARD (The Nuclear Option - Guaranteed to work)
-    "*"
 ]
 
+# The Nuclear CORS Setup for Firebase Token Auth
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins, # Ensure this variable is passed here
-    allow_credentials=True,
+    allow_origins=["*"],      # Open the floodgates, Vercel is welcome here
+    allow_credentials=False,  # <-- THIS IS THE MAGIC KEY. We don't use cookies!
     allow_methods=["*"],
     allow_headers=["*"],
 )

@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, MapPin, X, Loader2, BookOpen } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useInventoryStore } from "@/store/inventoryStore";
+import { useInventoryStore, type Book } from "@/store/inventoryStore";
+import api from "@/lib/axios"; // Imported Axios for the analytics call
 
 interface Props {
   isOpen: boolean;
@@ -26,6 +27,22 @@ export default function StudentSearchModal({ isOpen, onClose }: Props) {
     b.author.toLowerCase().includes(query.toLowerCase())
   );
 
+  // THE NEW FIRE-AND-FORGET LOGGING FUNCTION
+  const handleLaunchDigitalTwin = async (book: Book) => {
+    // 1. Background Analytics Logging
+    try {
+      api.post("/api/v1/analytics/log-search", {
+        search_query: query || book.title, // Logs what they typed, or the title if they just clicked
+        unity_location_id: book.unity_location_id
+      }).then(() => console.log("Search intent logged successfully."));
+    } catch (error) {
+      console.error("Silent fail on analytics:", error);
+    }
+
+    // 2. Instantly launch the 3D Map
+    navigate(`/student/map?target=${book.unity_location_id}`);
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -39,7 +56,7 @@ export default function StudentSearchModal({ isOpen, onClose }: Props) {
             className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50"
           />
 
-          {/* Modal Container - Flexbox Centering for Mobile Stability */}
+          {/* Modal Container */}
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -96,8 +113,9 @@ export default function StudentSearchModal({ isOpen, onClose }: Props) {
                         layout
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
+                        // UPDATED: Now triggers the logging function instead of navigating directly
+                        onClick={() => handleLaunchDigitalTwin(book)}
                         className="group flex items-center gap-4 p-3 rounded-xl hover:bg-slate-800 border border-transparent hover:border-slate-700 transition-all cursor-pointer relative overflow-hidden"
-                        onClick={() => navigate(`/student/map?target=${book.unity_location_id}`)}
                       >
                         {/* Hover Glow Effect */}
                         <div className="absolute inset-0 bg-blue-600/5 opacity-0 group-hover:opacity-100 transition-opacity" />

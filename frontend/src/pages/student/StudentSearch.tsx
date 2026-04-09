@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Search, MapPin, ChevronRight } from "lucide-react";
+import { Search, MapPin} from "lucide-react";
 import { useInventoryStore } from "@/store/inventoryStore"; // Reusing the store!
 
 export default function StudentSearch() {

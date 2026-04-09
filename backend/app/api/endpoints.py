@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
-from sqlmodel import Session, select, delete  # <-- Added 'delete' here
+from sqlmodel import Session, select
 from app.db.engine import get_session
-from app.models import User, Book, BookCopy, Transaction, SearchLog
+from app.models import User, Transaction, SearchLog, Book, BookCopy
 from datetime import datetime, timedelta
 import uuid
 import random
-from sqlalchemy import func
-from sqlalchemy import text
+from sqlalchemy import text, func
+from pydantic import BaseModel
 
 router = APIRouter()
 
@@ -59,6 +59,21 @@ def issue_book(
     session.commit()
     
     return {"status": "success", "message": f"Book issued to {user.full_name}", "due_date": new_transaction.due_date}
+    
+class SearchLogCreate(BaseModel):
+    search_query: str
+    unity_location_id: str
+
+@router.post("/analytics/log-search")
+def log_search(payload: SearchLogCreate, session: Session = Depends(get_session)):
+    log_entry = SearchLog(
+        search_query=payload.search_query,
+        target_unity_location_id=payload.unity_location_id # Fixed mapping
+    )
+    session.add(log_entry)
+    session.commit()
+    
+    return {"status": "success", "message": "Search intent logged successfully"}
 
 @router.post("/books/add")
 def add_book(book_data: Book, session: Session = Depends(get_session)):
@@ -435,56 +450,5 @@ def seed_realistic_nuv_data(session: Session = Depends(get_session)):
         db_users.append(user)
         
     session.commit()
-
-    # 4. SEED TRANSACTIONS & SEARCH LOGS
-    all_copies = session.exec(select(BookCopy)).all()
-    now = datetime.utcnow()
-
-    for user in db_users:
-        # Every user gets 1 to 4 random transactions
-        for _ in range(random.randint(1, 4)):
-            copy = random.choice(all_copies)
-            status = random.choice(["active", "completed", "overdue"])
-            
-            if status == "completed":
-                issue_date = now - timedelta(days=random.randint(15, 60))
-                due_date = issue_date + timedelta(days=14)
-                return_date = issue_date + timedelta(days=random.randint(5, 14))
-            elif status == "active":
-                issue_date = now - timedelta(days=random.randint(1, 12))
-                due_date = issue_date + timedelta(days=14)
-                return_date = None
-                copy.status = "issued"
-            else: # overdue
-                issue_date = now - timedelta(days=random.randint(15, 30))
-                due_date = issue_date + timedelta(days=14)
-                return_date = None
-                copy.status = "issued"
-
-            tx = Transaction(
-                id=str(uuid.uuid4()),
-                user_id=user.id,
-                copy_id=copy.id,
-                issue_date=issue_date,
-                due_date=due_date,
-                return_date=return_date,
-                status=status
-            )
-            session.add(tx)
-
-        # Generate some Analytics/Search Logs for each user
-        for _ in range(random.randint(2, 5)):
-            book_searched = random.choice(db_books)
-            log = SearchLog(
-                id=str(uuid.uuid4()),
-                user_id=user.id,
-                search_query=book_searched.title[:random.randint(4, len(book_searched.title))], # Simulate partial typing
-                target_unity_location_id=book_searched.unity_location_id,
-                timestamp=now - timedelta(hours=random.randint(1, 72))
-            )
-            session.add(log)
-
-    session.commit()
-    return {"message": "Successfully seeded 50 NUV students, real books, transactions, and search analytics!"}
-
-
+    
+    return {"message": "Database wiped and seeded with 50 correctly formatted books!", "count": len(books_to_add)}
