@@ -6,9 +6,10 @@ import AdminLayout from "@/pages/admin/AdminLayout";
 import AdminDashboard from "@/pages/admin/Dashboard";
 import InventoryPage from "@/pages/admin/inventory/InventoryPage";
 // IMPORT YOUR NEW UNITY COMPONENT
-import LibraryDigitalTwin from "@/components/LibraryDigitalTwin";
 import StudentSearch from "@/pages/student/StudentSearch";
 import MapPage from "@/pages/student/MapPage";
+import StudentsPage from "@/pages/admin/StudentsPage";
+import LogsPage from "@/pages/admin/LogsPage";
 
 function App() {
   return (
@@ -25,7 +26,9 @@ function App() {
         {/* Admin Section */}
         <Route path="/admin" element={<AdminLayout />}>
            <Route path="dashboard" element={<AdminDashboard />} />
+           <Route path="students" element={<StudentsPage />} />
            <Route path="inventory" element={<InventoryPage />} />
+           <Route path="fines" element={<LogsPage />} />
         </Route>
 
       </Routes>

@@ -13,6 +13,11 @@ export default function BookCard({ book }: BookCardProps) {
     book.status === 'In Stock' ? 'bg-green-500/20 text-green-400 border-green-500/50' :
     book.status === 'Low Stock' ? 'bg-yellow-500/20 text-yellow-400 border-yellow-500/50' :
     'bg-red-500/20 text-red-400 border-red-500/50';
+    
+
+  const handlePhase2Feature = () => {
+    alert("System Notice: This advanced management feature is slated to be implemented soon in Phase 2. Core functionalities are currently active.");
+  };
 
   return (
     <motion.div
@@ -27,7 +32,18 @@ export default function BookCard({ book }: BookCardProps) {
       <div className="relative p-4 flex gap-4">
         {/* UPDATED: cover -> cover_image_url */}
         <div className="relative w-24 h-36 flex-shrink-0 rounded-lg overflow-hidden shadow-2xl">
-          <img src={book.cover_image_url} alt={book.title} className="w-full h-full object-cover" />
+          <img 
+            src={book.cover_image_url} 
+            alt={book.title}
+            className="w-full h-full object-cover" // Keep whatever classes you already have here
+            onError={(e) => {
+              // 1. Instantly kill the error listener so it cannot loop
+              e.currentTarget.onerror = null; 
+    
+              // 2. Apply a sleek, dark-mode matching placeholder
+              e.currentTarget.src = "https://placehold.co/150x200/1e293b/94a3b8?text=No+Cover";
+            }}
+          />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
         </div>
 
@@ -65,7 +81,11 @@ export default function BookCard({ book }: BookCardProps) {
       </div>
 
       <div className="absolute bottom-0 left-0 right-0 h-10 bg-gradient-to-t from-slate-950 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-2">
-         <p className="text-[10px] text-blue-300 font-medium">CLICK TO MANAGE</p>
+         <p className="text-[10px] text-blue-300 font-medium">
+          <button onClick={handlePhase2Feature}>
+            Click to Manage
+          </button>
+        </p>
       </div>
     </motion.div>
   );

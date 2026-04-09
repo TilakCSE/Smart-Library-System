@@ -1,199 +1,221 @@
 import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
-import { Card, CardContent } from "@/components/ui/card";
-import { Search, Zap, Activity, Users, ArrowUpRight, TrendingUp } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { motion, type Variants } from "framer-motion";
+import api from "@/lib/axios";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Users, BookOpen, AlertTriangle, DollarSign, Loader2, TrendingUp, Flame, Trophy } from "lucide-react";
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
-// Initial Dummy Data
-const initialData = [
-  { name: '10:00', visitors: 40, fine: 20 },
-  { name: '10:05', visitors: 30, fine: 10 },
-  { name: '10:10', visitors: 20, fine: 50 },
-  { name: '10:15', visitors: 27, fine: 30 },
-  { name: '10:20', visitors: 18, fine: 40 },
-  { name: '10:25', visitors: 23, fine: 20 },
-  { name: '10:30', visitors: 34, fine: 10 },
-];
+interface AnalyticsData {
+  stats: {
+    total_students: number;
+    active_issues: number;
+    overdue_count: number;
+    total_fines: number;
+  };
+  heatmap_data: {
+    name: string;
+    searches: number;
+  }[];
+  // ADD THIS:
+  trending_books: {
+    title: string;
+    author: string;
+    searches: number;
+  }[];
+}
 
 export default function AdminDashboard() {
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState<AnalyticsData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // LIVE DATA SIMULATION ENGINE
   useEffect(() => {
-    const interval = setInterval(() => {
-      setData(currentData => {
-        // 1. Clone the current array
-        const newData = [...currentData];
-        // 2. Remove the first item (oldest)
-        newData.shift();
-        // 3. Generate a new time label
-        const lastTime = newData[newData.length - 1].name;
-        const [hour, minute] = lastTime.split(':').map(Number);
-        const newDate = new Date();
-        newDate.setHours(hour, minute + 5);
-        const newLabel = `${String(newDate.getHours()).padStart(2, '0')}:${String(newDate.getMinutes()).padStart(2, '0')}`;
-        
-        // 4. Generate random fluctuation
-        const newVisitors = Math.floor(Math.random() * (50 - 15 + 1)) + 15;
-        const newFine = Math.floor(Math.random() * (60 - 5 + 1)) + 5;
+    const fetchAnalytics = async () => {
+      try {
+        const response = await api.get('/api/v1/admin/analytics');
+        setData(response.data);
+      } catch (error) {
+        console.error("Failed to fetch analytics:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-        // 5. Add new item
-        newData.push({ name: newLabel, visitors: newVisitors, fine: newFine });
-        return newData;
-      });
-    }, 2000); // Updates every 2 seconds
-
-    return () => clearInterval(interval);
+    fetchAnalytics();
   }, []);
+
+  // Framer Motion Animation Variants
+  const container : Variants = {
+    hidden: { opacity: 0 },
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+  };
   
-  const StatCard = ({ title, value, sub, icon: Icon, color }: any) => (
-    <motion.div 
-      whileHover={{ y: -5 }}
-      className="relative overflow-hidden p-6 rounded-2xl bg-slate-900 border border-slate-800 shadow-xl group"
-    >
-      <div className={`absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity ${color}`}>
-        <Icon className="w-24 h-24" />
+  const item : Variants = {
+    hidden: { y: 20, opacity: 0 },
+    show: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 300, damping: 24 } }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 h-full flex flex-col items-center justify-center space-y-4 text-slate-400">
+        <Loader2 className="w-10 h-10 animate-spin text-blue-500" />
+        <p className="animate-pulse">Aggregating Global Vault Analytics...</p>
       </div>
-      <div className="relative z-10">
-        <div className="flex items-center gap-3 mb-4">
-          <div className={`p-2 rounded-lg bg-white/5 ${color} text-white`}>
-            <Icon className="w-5 h-5" />
-          </div>
-          <span className="text-slate-400 text-sm font-medium">{title}</span>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <h3 className="text-3xl font-bold text-white tracking-tight">{value}</h3>
-          <span className="text-xs font-medium text-green-400 flex items-center">
-            <ArrowUpRight className="w-3 h-3 mr-1" /> {sub}
-          </span>
-        </div>
-      </div>
-      <div className={`absolute bottom-0 left-0 h-1 w-0 group-hover:w-full transition-all duration-700 ${color.replace('text', 'bg')}`}></div>
-    </motion.div>
-  );
+    );
+  }
+
+  if (!data) return null;
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
-      
-      {/* HEADER */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white tracking-tight">Mission Control</h1>
-          <p className="text-slate-400">Live monitoring of library assets and gate access.</p>
-        </div>
-        
-        {/* Holographic Search */}
-        <div className="relative group w-full md:w-96">
-          <div className="absolute -inset-0.5 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg blur opacity-30 group-hover:opacity-100 transition duration-500"></div>
-          <div className="relative flex items-center bg-slate-900 rounded-lg p-1">
-            <Search className="w-5 h-5 text-slate-400 ml-3" />
-            <Input 
-              placeholder="Search Student ID..." 
-              className="border-0 bg-transparent text-white placeholder:text-slate-500 focus-visible:ring-0"
-            />
-            <div className="px-2 py-1 bg-slate-800 rounded text-xs text-slate-400 font-mono border border-slate-700">CMD+K</div>
-          </div>
-        </div>
-      </div>
+    <motion.div 
+      variants={container} 
+      initial="hidden" 
+      animate="show" 
+      className="p-8 max-w-7xl mx-auto space-y-8"
+    >
+      {/* Page Header */}
+      <motion.div variants={item}>
+        <h1 className="text-3xl font-bold text-white tracking-tight">System Overview</h1>
+        <p className="text-slate-400 mt-1">Real-time telemetry and student search intent.</p>
+      </motion.div>
 
-      {/* STATS */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <StatCard title="Total Students" value="2,845" sub="Live" icon={Users} color="text-blue-500 bg-blue-500" />
-        <StatCard title="Live Occupancy" value="142" sub="85% Capacity" icon={Activity} color="text-purple-500 bg-purple-500" />
-        <StatCard title="Active Fines" value="$1,240" sub="32 Overdue" icon={Zap} color="text-orange-500 bg-orange-500" />
-      </div>
-
-      {/* CHARTS */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      {/* Top Level Stats Grid */}
+      <motion.div variants={item} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         
-        {/* LEFT: LIVE TRAFFIC GRAPH */}
-        <Card className="lg:col-span-2 border-slate-800 bg-slate-900/50 backdrop-blur-sm relative overflow-hidden">
-          <CardContent className="p-6">
-            <div className="flex justify-between items-center mb-6">
+        {/* Total Students */}
+        <Card className="bg-slate-900 border-slate-800 shadow-xl overflow-hidden relative group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-blue-500"></div>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-400">Total Students</CardTitle>
+            <Users className="w-4 h-4 text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-white">{data.stats.total_students}</div>
+            <p className="text-xs text-slate-500 mt-1">Registered in system</p>
+          </CardContent>
+        </Card>
+
+        {/* Active Issues */}
+        <Card className="bg-slate-900 border-slate-800 shadow-xl overflow-hidden relative group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-400">Active Issues</CardTitle>
+            <BookOpen className="w-4 h-4 text-indigo-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-white">{data.stats.active_issues}</div>
+            <p className="text-xs text-slate-500 mt-1">Books currently circulating</p>
+          </CardContent>
+        </Card>
+
+        {/* Overdue Count */}
+        <Card className="bg-slate-900 border-slate-800 shadow-xl overflow-hidden relative group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-400">Overdue Books</CardTitle>
+            <AlertTriangle className="w-4 h-4 text-orange-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-white">{data.stats.overdue_count}</div>
+            <p className="text-xs text-slate-500 mt-1">Requiring return action</p>
+          </CardContent>
+        </Card>
+
+        {/* Total Fines */}
+        <Card className="bg-slate-900 border-slate-800 shadow-xl overflow-hidden relative group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-red-500"></div>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-slate-400">Total Fines</CardTitle>
+            <DollarSign className="w-4 h-4 text-red-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-white">${data.stats.total_fines}</div>
+            <p className="text-xs text-slate-500 mt-1">Unpaid penalty balances</p>
+          </CardContent>
+        </Card>
+
+      </motion.div>
+
+      {/* 2-Column Grid: Heatmap (Left) & Trending Books (Right) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* Main Analytics Chart - Search Intent Heatmap (Takes up 2 columns) */}
+        <motion.div variants={item} className="lg:col-span-2">
+          <Card className="bg-slate-900 border-slate-800 shadow-xl h-full">
+            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-800 pb-4">
               <div>
-                <h3 className="text-lg font-bold text-white">Live Foot Traffic</h3>
-                <p className="text-sm text-slate-500">Real-time gate entries</p>
+                <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-blue-500" />
+                  Digital Heatmap: Spatial Traffic
+                </CardTitle>
+                <p className="text-sm text-slate-400 mt-1">Search intent tracking for 3D route planning.</p>
               </div>
-              <div className="flex gap-2 items-center">
-                 <div className="flex items-center gap-1 bg-blue-500/10 px-2 py-1 rounded text-blue-400 text-xs animate-pulse">
-                    <TrendingUp className="w-3 h-3" /> LIVE
-                 </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="h-[350px] w-full">
+                {data.heatmap_data.length > 0 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={data.heatmap_data} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="colorSearches" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                      <XAxis dataKey="name" stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} tickLine={false} axisLine={false} dy={10} />
+                      <YAxis stroke="#475569" tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 500 }} tickLine={false} axisLine={false} dx={-10} />
+                      <Tooltip cursor={{ stroke: '#334155', strokeWidth: 2, strokeDasharray: '4 4' }} contentStyle={{ backgroundColor: '#0f172a', borderColor: '#1e293b', borderRadius: '12px', color: '#f8fafc', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.3)' }} itemStyle={{ color: '#60a5fa', fontWeight: 'bold' }} />
+                      <Area type="monotone" dataKey="searches" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorSearches)" activeDot={{ r: 6, fill: "#93c5fd", stroke: "#0f172a", strokeWidth: 2 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="h-full w-full flex items-center justify-center text-slate-500 font-medium">
+                    No search intent data recorded yet.
+                  </div>
+                )}
               </div>
-            </div>
-            
-            <div className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={data}>
-                  <defs>
-                    <linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorFines" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.4}/>
-                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-                  <XAxis dataKey="name" stroke="#64748b" tick={{fontSize: 12}} tickLine={false} axisLine={false} />
-                  <YAxis stroke="#64748b" tick={{fontSize: 12}} tickLine={false} axisLine={false} />
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', borderColor: '#1e293b', borderRadius: '8px', color: '#fff' }}
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="visitors" 
-                    stroke="#3b82f6" 
-                    strokeWidth={3} 
-                    fillOpacity={1} 
-                    fill="url(#colorVisits)" 
-                    isAnimationActive={false} // Disable initial animation for smoother live updates
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="fine" 
-                    stroke="#ef4444" 
-                    strokeWidth={3} 
-                    fillOpacity={1} 
-                    fill="url(#colorFines)" 
-                    isAnimationActive={false}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        {/* RIGHT: LIVE LOGS */}
-        <Card className="border-slate-800 bg-slate-900/50 backdrop-blur-sm">
-          <CardContent className="p-6">
-            <h3 className="text-lg font-bold text-white mb-4">Gate Access Logs</h3>
-            <div className="space-y-4">
-              {data.slice(0, 5).map((d, i) => (
-                <motion.div 
-                  key={d.name} // Key helps React animate list changes
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-800 transition-colors cursor-pointer group border border-transparent hover:border-slate-700"
-                >
-                  <div className="h-10 w-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-xs font-bold text-slate-300 group-hover:border-blue-500 transition-colors">
-                    {d.visitors % 2 === 0 ? "IN" : "OUT"}
+        {/* Top Trending Books Leaderboard (Takes up 1 column) */}
+        <motion.div variants={item} className="lg:col-span-1">
+          <Card className="bg-slate-900 border-slate-800 shadow-xl h-full flex flex-col">
+            <CardHeader className="border-b border-slate-800 pb-4">
+              <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+                <Flame className="w-5 h-5 text-orange-500" />
+                Trending Assets
+              </CardTitle>
+              <p className="text-sm text-slate-400 mt-1">Most searched catalogue items.</p>
+            </CardHeader>
+            <CardContent className="pt-4 flex-1 flex flex-col gap-4">
+              {data.trending_books.map((book, index) => (
+                <div key={index} className="flex items-center justify-between p-3 rounded-xl bg-slate-800/50 border border-slate-700/50 hover:bg-slate-800 transition-colors">
+                  <div className="flex items-center gap-3 overflow-hidden">
+                    <div className={`flex items-center justify-center w-8 h-8 rounded-full font-bold text-xs ${index === 0 ? 'bg-yellow-500/20 text-yellow-500' : index === 1 ? 'bg-slate-300/20 text-slate-300' : index === 2 ? 'bg-orange-700/20 text-orange-400' : 'bg-slate-800 text-slate-500'}`}>
+                      {index === 0 ? <Trophy className="w-4 h-4" /> : `#${index + 1}`}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-white truncate">{book.title}</p>
+                      <p className="text-xs text-slate-400 truncate">{book.author}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm font-medium text-white group-hover:text-blue-400 transition-colors">
-                        Student #{202400 + i + d.visitors}
-                    </p>
-                    <p className="text-xs text-slate-500">{d.name}</p>
+                  <div className="flex flex-col items-end pl-2">
+                    <span className="text-sm font-bold text-blue-400">{book.searches}</span>
+                    <span className="text-[10px] uppercase tracking-wider text-slate-500 font-medium">Queries</span>
                   </div>
-                  <div className={`ml-auto h-2 w-2 rounded-full ${i === 0 ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`}></div>
-                </motion.div>
+                </div>
               ))}
-            </div>
-          </CardContent>
-        </Card>
+              {data.trending_books.length === 0 && (
+                <div className="flex-1 flex items-center justify-center text-slate-500 text-sm">
+                  No searches recorded.
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
 
       </div>
-    </div>
+    </motion.div>
   );
 }

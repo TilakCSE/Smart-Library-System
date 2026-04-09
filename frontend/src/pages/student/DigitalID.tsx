@@ -1,9 +1,18 @@
 import { motion } from "framer-motion";
-import { useAuthStore } from "@/store/authStore"; // Correct Capitalization
+import { useAuthStore } from "@/store/authStore"; 
 import { QrCode, Wifi } from "lucide-react";
 
-export default function DigitalID() {
+interface DigitalIDProps {
+  realName?: string;
+}
+
+export default function DigitalID({ realName }: DigitalIDProps) {
   const user = useAuthStore((state) => state.user);
+
+  // Safely extract the name without TypeScript panicking
+  const displayId = (realName || (user as any)?.email?.split('@')[0] || "STU-2024-X").toUpperCase();
+
+  
 
   return (
     <motion.div 
@@ -53,7 +62,7 @@ export default function DigitalID() {
              <div>
                 <p className="text-xs text-blue-300">STUDENT ID</p>
                 <p className="font-mono text-lg tracking-wider opacity-90">
-                  {user?.email?.split('@')[0].toUpperCase() || "STU-2024-X"}
+                  {displayId}
                 </p>
              </div>
              <div className="bg-white p-1 rounded-lg">

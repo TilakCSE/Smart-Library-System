@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useInventoryStore } from "@/store/inventoryStore";
 import BookCard from "./BookCard";
-import AddBookModal from "./AddBookModal"; // The new holographic modal
+import AddBookModal from "./AddBookModal"; 
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Plus, Filter, SlidersHorizontal } from "lucide-react";
@@ -13,11 +13,16 @@ export default function InventoryPage() {
     fetchBooks: state.fetchBooks 
   }));
   const [search, setSearch] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false); // State to control the modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     fetchBooks();
   }, []);
+
+  // The Phase 2 gracefully degraded alert
+  const handlePhase2Feature = () => {
+    alert("System Notice: This advanced management feature is slated to be implemented soon in Phase 2. Core functionalities are currently active.");
+  };
 
   // Filter books based on search query
   const filteredBooks = books.filter(book => 
@@ -37,11 +42,15 @@ export default function InventoryPage() {
         </div>
         
         <div className="flex gap-3">
-          <Button variant="outline" className="border-slate-700 bg-slate-900/50 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-blue-500/50 transition-all">
+          {/* ADDED ONCLICK HERE */}
+          <Button 
+            onClick={handlePhase2Feature}
+            variant="outline" 
+            className="border-slate-700 bg-slate-900/50 text-slate-300 hover:text-white hover:bg-slate-800 hover:border-blue-500/50 transition-all"
+          >
             <Filter className="w-4 h-4 mr-2" /> Filter
           </Button>
           
-          {/* The Trigger Button */}
           <Button 
             onClick={() => setIsModalOpen(true)}
             className="bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/20"
@@ -93,7 +102,6 @@ export default function InventoryPage() {
         )}
       </div>
 
-      {/* The Holographic Modal Component */}
       <AddBookModal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 

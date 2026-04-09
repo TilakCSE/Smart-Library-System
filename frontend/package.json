@@ -22,7 +22,7 @@
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.21.1",
     "react-unity-webgl": "^9.9.0",
-    "recharts": "^3.5.1",
+    "recharts": "^3.8.1",
     "tailwind-merge": "^2.2.0",
     "tailwindcss-animate": "^1.0.7",
     "zustand": "^4.4.7"

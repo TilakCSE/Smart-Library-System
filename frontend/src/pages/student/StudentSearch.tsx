@@ -45,7 +45,18 @@ export default function StudentSearch() {
               animate={{ opacity: 1, y: 0 }}
               className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex gap-4"
             >
-              <img src={book.cover_image_url} className="w-16 h-24 object-cover rounded-md shadow-sm" />
+              <img 
+                src={book.cover_image_url} 
+                alt={book.title}
+                className="w-full h-full object-cover" // Keep whatever classes you already have here
+                onError={(e) => {
+                // 1. Instantly kill the error listener so it cannot loop
+                  e.currentTarget.onerror = null; 
+    
+                // 2. Apply a sleek, dark-mode matching placeholder
+                  e.currentTarget.src = "https://placehold.co/150x200/1e293b/94a3b8?text=No+Cover";
+                }}
+              />
               
               <div className="flex-1 flex flex-col justify-between">
                 <div>
