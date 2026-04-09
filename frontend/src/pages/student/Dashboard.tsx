@@ -9,17 +9,18 @@ import { BookOpen, Clock, AlertTriangle, ArrowRight, MapPin, LogOut, Loader2 } f
 import StudentSearchModal from "@/components/StudentSearchModal";
 import { getAuth, signOut } from "firebase/auth";
 import { useNavigate } from "react-router-dom"; // Restored useNavigate
+import { useStudentStore } from "@/store/studentStore";
 
 export default function StudentDashboard() {
   const user = useAuthStore((state) => state.user);
   const navigate = useNavigate(); 
   
   // Geofence & Location State
-  const [isLocating] = useState(false);
-  const [locationError] = useState("");
+  const { isLocating, locationError, verifyLocation } = useStudentStore();
   const [greeting, setGreeting] = useState("Good Morning");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [tapCount, setTapCount] = useState(0); // For God Mode
+  const [isGodMode, setIsGodMode] = useState(false);
 
   // Database Analytics State
   interface DashboardData {
@@ -81,19 +82,31 @@ export default function StudentDashboard() {
 
   // God Mode Secret Tap Handler
   const handleSecretTap = () => {
-    setTapCount(prev => prev + 1);
-    if (tapCount >= 4) {
-      alert("🔐 GOD MODE UNLOCKED: Geofence restrictions bypassed.");
-      // Trigger your bypass logic in the store if needed
-      setTapCount(0);
-    }
+    setTapCount((prev) => {
+      const newCount = prev + 1;
+      if (newCount >= 5) { // 5 taps feels like a good secret code
+        setIsGodMode(true); // Flip the switch ON permanently for this session
+        alert("🔐 GOD MODE UNLOCKED: Geofence restrictions bypassed.");
+        return 0; // Reset taps, but God Mode stays on!
+      }
+      return newCount;
+    });
   };
 
   // Geofenced Map Launch
   const handleMapLaunch = async () => {
-    // If you have an async verifyLocation in your store, call it here.
-    // For now, we will open the modal directly.
-    setIsSearchOpen(true);
+    // 1. Check the true God Mode switch instead of tap count
+    if (isGodMode) {
+      setIsSearchOpen(true);
+      return;
+    }
+
+    // 2. Otherwise, run the strict Geofence check
+    const isAtLibrary = await verifyLocation();
+    
+    if (isAtLibrary) {
+      setIsSearchOpen(true);
+    }
   };
 
   return (
