@@ -1,6 +1,6 @@
+from sqlmodel import Field, SQLModel, Relationship
+from typing import Optional, List
 from datetime import datetime
-from typing import Optional
-from sqlmodel import Field, SQLModel
 import uuid
 
 class SearchLog(SQLModel, table=True):
