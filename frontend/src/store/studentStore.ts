@@ -3,8 +3,8 @@ import api from '@/lib/axios';
 
 // --- Geofence Configuration ---
 // Replace these with the exact coordinates of the NUV Library Entrance if you want perfect accuracy!
-const LIBRARY_LAT = 22.3175; 
-const LIBRARY_LNG = 73.1678; 
+const LIBRARY_LAT = 22.2929804;
+const LIBRARY_LNG = 73.1223148;
 const MAX_ALLOWED_DISTANCE = 50; // Max allowed distance in meters
 
 // Haversine formula to calculate real-world distance in meters
