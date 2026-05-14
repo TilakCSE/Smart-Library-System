@@ -1,26 +1,36 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from app.db.engine import get_session
-from app.models import User, Transaction, SearchLog, Book, BookCopy
+from app.models import User, Transaction, SearchLog, Book, BookCopy, Fine
 from datetime import datetime, timedelta
 import uuid
 import random
 from sqlalchemy import text, func
 from pydantic import BaseModel
+from app.services.firebase_auth import verify_token
 
 router = APIRouter()
 
 # --- 1. SEARCH BOOKS ---
+# backend/app/api/endpoints.py
+
 @router.get("/books/")
 def search_books(query: str = None, session: Session = Depends(get_session)):
     statement = select(Book)
     if query:
-        # Search by title or author
+        # FIX: Use .ilike() for case-insensitive searching in PostgreSQL
         statement = statement.where(
-            (Book.title.contains(query)) | (Book.author.contains(query))
+            (Book.title.ilike(f"%{query}%")) | (Book.author.ilike(f"%{query}%"))
         )
     books = session.exec(statement).all()
     return books
+
+@router.get("/books/{book_id}")
+def get_book_by_id(book_id: str, session: Session = Depends(get_session)):
+    book = session.get(Book, book_id)
+    if not book:
+        raise HTTPException(status_code=404, detail="Asset not found")
+    return book
 
 # --- 2. ISSUE BOOK (Logic) ---
 @router.post("/transactions/issue")
@@ -64,6 +74,54 @@ class SearchLogCreate(BaseModel):
     search_query: str
     unity_location_id: str
 
+
+@router.post("/transactions/return")
+def return_book(rfid_tag: str, session: Session = Depends(get_session)):
+    copy = session.exec(select(BookCopy).where(BookCopy.rfid_tag == rfid_tag)).first()
+    if not copy:
+        raise HTTPException(status_code=404, detail="RFID tag not recognized.")
+
+    tx = session.exec(select(Transaction).where(Transaction.copy_id == copy.id, Transaction.status.in_(["active", "overdue"]))).first()
+    if not tx:
+        raise HTTPException(status_code=400, detail="Asset not currently issued.")
+
+    book = session.get(Book, copy.book_id)
+    now = datetime.utcnow()
+    fine_amount = 0
+    fine_math = None
+
+    if now > tx.due_date:
+        days_late = (now - tx.due_date).days
+        fine_amount = days_late * 5  # ₹5 per day
+        
+        if fine_amount > 0:
+            # Save a descriptive reason so the student sees WHICH book caused the fine
+            book_title = book.title if book else rfid_tag
+            new_fine = Fine(user_id=tx.user_id, amount=fine_amount, reason=f"Late: {book_title}")
+            session.add(new_fine)
+            
+            # Send the math back to the React frontend
+            fine_math = {
+                "due_date": tx.due_date.strftime("%b %d, %Y"),
+                "return_date": now.strftime("%b %d, %Y"),
+                "days_late": days_late
+            }
+
+    tx.status = "completed"
+    tx.return_date = now
+    copy.status = "available"
+
+    session.add(tx)
+    session.add(copy)
+    session.commit()
+
+    return {
+        "status": "success", 
+        "message": f"Asset successfully returned.",
+        "fines_generated": fine_amount,
+        "fine_math": fine_math
+    }
+
 @router.post("/analytics/log-search")
 def log_search(payload: SearchLogCreate, session: Session = Depends(get_session)):
     log_entry = SearchLog(
@@ -89,69 +147,93 @@ def add_book(book_data: Book, session: Session = Depends(get_session)):
     
     return {"status": "success", "book_id": book_data.id, "message": "Asset Registered in Vault"}
 
-@router.get("/users/me/{email}/dashboard")
-def get_student_dashboard_data(email: str, session: Session = Depends(get_session)):
-    # 1. Find the user
+# backend/app/api/endpoints.py
+
+@router.get("/dashboard")
+def get_student_dashboard_data(
+    session: Session = Depends(get_session),
+    token_data: dict = Depends(verify_token)
+):
+    email = token_data.get("email")
     user = session.exec(select(User).where(User.email == email)).first()
+    
     if not user:
-        return {"full_name": email.split("@")[0], "issued": 0, "fines": 0, "due_text": "-", "activity": []}
+        return {"full_name": email.split("@")[0] if email else "Student", "issued": 0, "fines": 0, "due_text": "-", "activity": [], "fine_details": [], "recommendations": []}
 
-    # 2. Get all their transactions, newest first
-    txs = session.exec(select(Transaction).where(Transaction.user_id == user.id).order_by(Transaction.issue_date.desc())).all()
-
-    issued_count = 0
-    fines = 0
-    earliest_due = None
-
-    # 3. Calculate Stats
-    for tx in txs:
-        if tx.status in ["active", "overdue"]:
-            issued_count += 1
-        if tx.status == "overdue":
-            fines += 5
+    try:
+        txs = session.exec(select(Transaction).where(Transaction.user_id == user.id).order_by(Transaction.issue_date.desc())).all()
         
-        # Find the closest due date for active books
-        if tx.status == "active":
-            if earliest_due is None or tx.due_date < earliest_due:
-                earliest_due = tx.due_date
+        # 1. Issued & Due Text
+        active_and_overdue = [t for t in txs if t.status in ["active", "overdue"]]
+        issued_count = len(active_and_overdue)
+        due_text = "-"
+        if active_and_overdue:
+            days_left = (active_and_overdue[0].due_date - datetime.utcnow()).days
+            due_text = f"{days_left}d" if days_left > 0 else "Overdue!"
 
-    # Format the "Due In" text
-    due_text = "-"
-    if fines > 0:
-        due_text = "Overdue!"
-    elif earliest_due:
-        delta = (earliest_due - datetime.utcnow()).days
-        due_text = f"{max(0, delta)}d"
+        # 2. Fines & Fine Details
+        user_fines = session.exec(select(Fine).where(Fine.user_id == user.id, Fine.is_paid == False)).all()
+        total_fines = sum([f.amount for f in user_fines])
+        fine_details = [{"reason": f.reason, "amount": f.amount} for f in user_fines]
 
-    # 4. Get Recent Activity (Top 3)
-    activity = []
-    for tx in txs[:3]:
-        # Look up the actual book title
-        copy = session.get(BookCopy, tx.copy_id)
-        book = session.get(Book, copy.book_id) if copy else None
-        title = book.title if book else "Unknown Asset"
+        # 3. Activity Timeline & Track Reading Tastes
+        activity_list = []
+        borrowed_categories = []
+        
+        for tx in txs:
+            copy = session.get(BookCopy, tx.copy_id)
+            book = session.get(Book, copy.book_id) if copy else None
+            
+            if book:
+                if len(activity_list) < 5:
+                    desc = f"Status: {tx.status.capitalize()}"
+                    if tx.status in ["active", "overdue"]:
+                        desc += f" | Issued: {tx.issue_date.strftime('%b %d')} | Due: {tx.due_date.strftime('%b %d')}"
+                    elif tx.status == "completed" and tx.return_date:
+                        desc += f" | Returned: {tx.return_date.strftime('%b %d')}"
+                        
+                    activity_list.append({
+                        "title": book.title,
+                        "desc": desc,
+                        "status": tx.issue_date.strftime("%b %d, %Y") # Year included to fix the '2001' JS bug
+                    })
+                borrowed_categories.append(book.category)
+        
+        # 4. Recommendation Engine
+        target_category = borrowed_categories[0] if borrowed_categories else "Artificial Intelligence"
+        
+        # Fetch 3 books from the user's favorite category
+        recommended_books = session.exec(
+            select(Book).where(Book.category == target_category).limit(3)
+        ).all()
 
-        if tx.status == "completed":
-            desc = "Returned successfully"
-        elif tx.status == "overdue":
-            desc = "Return is overdue"
-        else:
-            desc = "Currently borrowed"
+        # Fallback if that specific category has fewer than 3 books in DB
+        if len(recommended_books) < 3:
+            recommended_books = session.exec(select(Book).limit(3)).all()
 
-        activity.append({
-            "title": title,
-            "desc": desc,
-            "status": tx.status.capitalize()
-        })
+        recommendations = []
+        for rb in recommended_books:
+            loc = rb.unity_location_id.split('_Shelf')[0].replace('_', ' ') if rb.unity_location_id else "Available"
+            recommendations.append({
+                "title": rb.title,
+                "author": rb.author,
+                "status": f"Ready at {loc}"
+            })
 
-    return {
-        "full_name": user.full_name,
-        "issued": issued_count,
-        "fines": fines,
-        "due_text": due_text,
-        "activity": activity
-    }
-
+        return {
+            "full_name": user.full_name,
+            "issued": issued_count,
+            "fines": total_fines,
+            "due_text": due_text,
+            "activity": activity_list,
+            "fine_details": fine_details,
+            "recommendations": recommendations
+        }
+    except Exception as e:
+        print(f"--- DASHBOARD ERROR: {str(e)} ---")
+        return {"full_name": user.full_name, "issued": 0, "fines": 0, "due_text": "Error", "activity": [], "fine_details": [], "recommendations": []}
+    
+    
 @router.get("/admin/master-ledger")
 def get_master_ledger(session: Session = Depends(get_session)):
     # 1. Fetch all required data
@@ -242,7 +324,7 @@ def fix_students_data(session: Session = Depends(get_session)):
     session.exec(text("DELETE FROM transaction;"))
 
     # 3. Delete all users EXCEPT your login
-    session.exec(text("DELETE FROM \"user\" WHERE email != 'student@college.edu';"))
+    session.exec(text("DELETE FROM \"user\" WHERE email NOT IN ('student@college.edu', 'tilaksinh.p.chauhan@nuv.ac.in');"))
     session.commit()
 
     # 4. Generate 50 Highly Diverse Indian Names
@@ -372,6 +454,84 @@ def get_admin_analytics(session: Session = Depends(get_session)):
         "trending_books": trending_books
     }
 
+@router.post("/admin/reset-my-student")
+def reset_my_student(session: Session = Depends(get_session)):
+    # 1. Find the specific test user
+    email = "student@college.edu"
+    user = session.exec(select(User).where(User.email == email)).first()
+    
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User {email} not found")
+
+    # 2. Reset any books they currently have so they are 'available' again
+    old_txs = session.exec(select(Transaction).where(Transaction.user_id == user.id)).all()
+    for tx in old_txs:
+        copy = session.get(BookCopy, tx.copy_id)
+        if copy:
+            copy.status = "available"
+            session.add(copy)
+    session.commit() # Save the book statuses
+
+    # 3. Wipe their old transactions and search logs
+    session.exec(text(f"DELETE FROM transaction WHERE user_id = '{user.id}'"))
+    session.exec(text(f"DELETE FROM search_logs WHERE user_id = '{user.id}'"))
+    session.commit()
+
+    # 4. Fetch 4 available book copies to create the perfect test scenario
+    available_copies = session.exec(select(BookCopy).where(BookCopy.status == "available")).all()
+    if len(available_copies) < 4:
+        raise HTTPException(status_code=400, detail="Not enough available book copies in DB to seed data.")
+
+    now = datetime.utcnow()
+
+    # --- INJECT NEW DATA ---
+    
+    # Event 1: ACTIVE (Borrowed 9 days ago, Due in 5 days. Triggers the Circular Progress Bar)
+    copy1 = available_copies[0]
+    copy1.status = "issued"
+    tx1 = Transaction(
+        user_id=user.id, copy_id=copy1.id,
+        issue_date=now - timedelta(days=9), 
+        due_date=now + timedelta(days=5),
+        status="active"
+    )
+
+    # Event 2: OVERDUE (Borrowed 20 days ago, Due 6 days ago. Triggers the Fines)
+    copy2 = available_copies[1]
+    copy2.status = "issued"
+    tx2 = Transaction(
+        user_id=user.id, copy_id=copy2.id,
+        issue_date=now - timedelta(days=20), 
+        due_date=now - timedelta(days=6),
+        status="overdue"
+    )
+
+    # Event 3: COMPLETED (Returned successfully. Populates Spatial History Timeline)
+    copy3 = available_copies[2]
+    tx3 = Transaction(
+        user_id=user.id, copy_id=copy3.id,
+        issue_date=now - timedelta(days=40), 
+        due_date=now - timedelta(days=26), 
+        return_date=now - timedelta(days=28),
+        status="completed"
+    )
+
+    # Event 4: COMPLETED (Returned successfully. Populates Spatial History Timeline)
+    copy4 = available_copies[3]
+    tx4 = Transaction(
+        user_id=user.id, copy_id=copy4.id,
+        issue_date=now - timedelta(days=30), 
+        due_date=now - timedelta(days=16), 
+        return_date=now - timedelta(days=17),
+        status="completed"
+    )
+
+    # 5. Save everything to NeonDB
+    session.add_all([tx1, tx2, tx3, tx4, copy1, copy2])
+    session.commit()
+
+    return {"message": "Success! student@college.edu now has 1 Active, 1 Overdue, and 2 Completed books."}
+
 @router.post("/transactions/seed-realistic-nuv")
 def seed_realistic_nuv_data(session: Session = Depends(get_session)):
     # 1. CLEANUP: Wipe old dummy data so we don't get Duplicate ISBN errors
@@ -452,3 +612,82 @@ def seed_realistic_nuv_data(session: Session = Depends(get_session)):
     session.commit()
     
     return {"message": "Database wiped and seeded with 50 correctly formatted books!", "count": len(books_to_add)}
+
+@router.post("/admin/demo-presentation-seed")
+def demo_presentation_seed(session: Session = Depends(get_session)):
+    # 1. WIPE OLD TRANSACTIONS, FINES, AND SEARCH LOGS
+    session.exec(text("DELETE FROM fine;"))
+    session.exec(text("DELETE FROM transaction;"))
+    session.exec(text("DELETE FROM search_logs;"))
+    
+    # 2. RESET ALL COPIES TO AVAILABLE
+    session.exec(text("UPDATE book_copies SET status = 'available';"))
+    session.commit()
+
+    # 3. GET OUR 10 USERS, BOOKS, AND COPIES (Fixed the Limit Error!)
+    users = session.exec(select(User).where(User.role == "student").limit(10)).all()
+    all_copies = session.exec(select(BookCopy)).all()
+    all_books = session.exec(select(Book)).all()
+
+    if not users or not all_copies:
+        raise HTTPException(status_code=400, detail="Database is empty. Run seed_master.py first.")
+
+    now = datetime.utcnow()
+
+    # 4. GENERATE 20 TRANSACTIONS SPREAD ACROSS USERS
+    for _ in range(20):
+        user = random.choice(users)
+        copy = random.choice([c for c in all_copies if c.status == "available"])
+        book = session.get(Book, copy.book_id)
+        
+        state = random.choice(["active", "overdue", "completed"])
+
+        if state == "completed":
+            issue_date = now - timedelta(days=random.randint(20, 40))
+            due_date = issue_date + timedelta(days=14)
+            return_date = issue_date + timedelta(days=random.randint(5, 12))
+            copy.status = "available"
+        elif state == "active":
+            issue_date = now - timedelta(days=random.randint(1, 10))
+            due_date = issue_date + timedelta(days=14)
+            return_date = None
+            copy.status = "issued"
+        elif state == "overdue":
+            issue_date = now - timedelta(days=random.randint(16, 25))
+            due_date = issue_date + timedelta(days=14)
+            return_date = None
+            copy.status = "issued"
+            
+            # --- GENERATE FINE FOR OVERDUE ---
+            days_late = (now - due_date).days
+            fine_amount = days_late * 5
+            new_fine = Fine(
+                user_id=user.id, 
+                amount=fine_amount, 
+                reason=f"Late: {book.title if book else 'Unknown Asset'}"
+            )
+            session.add(new_fine)
+
+        tx = Transaction(
+            user_id=user.id, copy_id=copy.id,
+            issue_date=issue_date, due_date=due_date, 
+            return_date=return_date, status=state
+        )
+        session.add(tx)
+        session.add(copy)
+
+    # 5. INJECT 15 DUMMY SEARCH LOGS FOR THE ADMIN HEATMAP
+    if all_books:
+        for _ in range(15):
+            rand_book = random.choice(all_books)
+            rand_user = random.choice(users)
+            search_log = SearchLog(
+                user_id=rand_user.id,
+                search_query=rand_book.title,
+                target_unity_location_id=rand_book.unity_location_id,
+                timestamp=now - timedelta(hours=random.randint(1, 72))
+            )
+            session.add(search_log)
+
+    session.commit()
+    return {"message": "Demo Ready! 20 transactions and 15 search logs injected successfully."}
