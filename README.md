@@ -73,28 +73,57 @@ Wrapped in a premium, cyberpunk-inspired UI featuring skeuomorphic 3D bookshelve
 ```bash
 git clone [https://github.com/YourUsername/smart-library-system.git](https://github.com/YourUsername/smart-library-system.git)
 cd smart-library-system
-2. Backend Setup
-Bash
+```
+
+---
+## 2. Backend Setup
+
+```bash
 cd apps/backend
+
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Linux / Mac
+source venv/bin/activate
+
+# Windows
+# venv\Scripts\activate
+
 pip install -r requirements.txt
-Create a .env file in the backend directory:
+```
 
-Code snippet
+Create a `.env` file inside the backend directory:
+
+```env
 DATABASE_URL=postgresql://user:password@hostname/dbname
-FIREBASE_SERVICE_ACCOUNT='{"type":"service_account", ...}' # Stringified JSON
-Run the server:
+FIREBASE_SERVICE_ACCOUNT='{"type":"service_account", ...}'
+```
 
-Bash
+Run the backend server:
+
+```bash
 uvicorn app.main:app --reload --port 8000
-3. Frontend Setup
-Bash
-cd apps/frontend
-npm install
-Create a .env.local file in the frontend directory:
+```
 
-Code snippet
+Backend runs on:
+
+```text
+http://localhost:8000
+```
+
+---
+
+## 3. Frontend Setup
+
+```bash
+cd apps/frontend
+
+npm install
+```
+
+Create a `.env.local` file inside the frontend directory:
+
+```env
 NEXT_PUBLIC_API_URL=http://localhost:8000
 NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
@@ -102,41 +131,69 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
-Run the development server:
+```
 
-Bash
+Run the frontend development server:
+
+```bash
 npm run dev
-🏛️ Project Structure
-Plaintext
+```
+
+Frontend runs on:
+
+```text
+http://localhost:3000
+```
+
+---
+
+# 🏛️ Project Structure
+
+```text
 smart-library-system/
 ├── apps/
 │   ├── frontend/          # Next.js Application
-│   │   ├── app/           # App Router Pages (Dashboard, Books, Login, Admin)
-│   │   ├── components/    # Reusable UI elements & MagicUI components
-│   │   ├── lib/           # Firebase & Axios configurations
-│   │   └── store/         # Zustand global states (Geofence, Auth, Inventory)
+│   │   ├── app/           # App Router Pages
+│   │   ├── components/    # Reusable UI Components
+│   │   ├── lib/           # Firebase & Axios Configurations
+│   │   └── store/         # Zustand Global States
 │   │
 │   └── backend/           # FastAPI Application
 │       ├── app/
-│       │   ├── api/       # Route endpoints (users, books, transactions)
-│       │   ├── core/      # Config, security, and Auth middleware
-│       │   ├── db/        # Database session and NeonDB engine
-│       │   └── models/    # SQLModel definitions
-│       └── seed_master.py # Database population and demo data injection script
+│       │   ├── api/       # API Routes
+│       │   ├── core/      # Config & Middleware
+│       │   ├── db/        # Database Engine
+│       │   └── models/    # SQLModel Definitions
+│       │
+│       └── seed_master.py
 │
 ├── .gitignore
 └── README.md
-🎓 Academic Credit
-Navrachana University Vadodara (NUV)
+```
 
-Developer: Tilaksinh Chauhan
+---
 
-Program: B.Tech Computer Science and Engineering (CSE) - 3rd Year
+# 🎓 Academic Credit
 
-Course Context: Minor Project (6th Semester)
+**Navrachana University Vadodara (NUV)**
 
-📄 License
+- Developer: Tilaksinh Chauhan
+- Program: B.Tech Computer Science and Engineering (CSE)
+- Semester: 6th Semester
+- Project Type: Minor Project
+
+---
+
+# 📄 License
+
 This project is licensed under the MIT License.
 
-  
-End of transmission. System initialized. 🟢
+---
+
+# ⭐ Support
+
+If you like the project, consider starring the repository.
+
+---
+
+_End of transmission. System initialized. 🟢_
