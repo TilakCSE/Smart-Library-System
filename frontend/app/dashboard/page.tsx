@@ -84,18 +84,7 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#09090b] text-neutral-300 p-6 md:p-12 font-sans selection:bg-cyan-500/30">
       
       {/* --- TOP BAR --- */}
-      <header className="max-w-[1600px] mx-auto flex justify-between items-center mb-12">
-        <div className="flex items-center gap-6">
-          <div className="relative group">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-500 group-focus-within:text-cyan-400 transition-colors" />
-            <input 
-              type="text" 
-              placeholder="Search catalog or archives..." 
-              className="bg-neutral-900/50 border border-white/5 rounded-2xl py-3 pl-12 pr-6 text-sm w-64 md:w-96 focus:outline-none focus:ring-1 focus:ring-cyan-500/50 transition-all"
-            />
-          </div>
-        </div>
-        
+      <header className="max-w-[1600px] mx-auto flex justify-end items-center mb-8 md:mb-12">
         <div className="flex items-center gap-4">
           <div className="text-right hidden md:block">
             <p 
@@ -105,8 +94,8 @@ export default function DashboardPage() {
             </p>
             <p className="text-sm font-bold text-white capitalize">{dashboardData?.full_name || "Student"}</p>
           </div>
-          <button onClick={handleLogout} className="h-12 w-12 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center hover:bg-rose-500/10 hover:text-rose-400 transition-all group">
-            <LogOut className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
+          <button onClick={handleLogout} className="h-10 w-10 md:h-12 md:w-12 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center hover:bg-rose-500/10 hover:text-rose-400 transition-all group shadow-sm">
+            <LogOut className="w-4 h-4 md:w-5 md:h-5 group-hover:-translate-x-1 transition-transform" />
           </button>
         </div>
       </header>

@@ -268,22 +268,23 @@ export function CardStack<T extends CardStackItem>({
                   }
                 : {};
 
-              return (
-                <motion.div
-                  key={item.id}
-                  className={cn(
-                    "absolute bottom-0 rounded-2xl border-4 border-black/10 dark:border-white/10 overflow-hidden shadow-xl",
-                    "will-change-transform select-none",
-                    isActive
-                      ? "cursor-grab active:cursor-grabbing"
-                      : "cursor-pointer",
-                  )}
-                  style={{
-                    width: cardWidth,
-                    height: cardHeight,
-                    zIndex,
-                    transformStyle: "preserve-3d",
-                  }}
+                return (
+                  <motion.div
+                    key={item.id}
+                    className={cn(
+                      // SOFTER AESTHETICS: Thinner border, massive corner radius, deep shadows
+                      "absolute bottom-0 rounded-[2rem] md:rounded-[2.5rem] border border-white/10 overflow-hidden shadow-2xl",
+                      "will-change-transform select-none",
+                      isActive
+                        ? "cursor-grab active:cursor-grabbing"
+                        : "cursor-pointer",
+                    )}
+                    style={{
+                      width: cardWidth,
+                      height: cardHeight,
+                      zIndex,
+                      transformStyle: "preserve-3d",
+                    }}
                   initial={
                     reduceMotion
                       ? false
@@ -376,14 +377,14 @@ export function CardStack<T extends CardStackItem>({
 
 function DefaultFanCard({ item }: { item: CardStackItem; active: boolean }) {
   return (
-    <div className="relative h-full w-full">
+    <div className="relative h-full w-full bg-zinc-900">
       {/* image */}
       <div className="absolute inset-0">
         {item.imageSrc ? (
           <img
             src={item.imageSrc}
             alt={item.title}
-            className="h-full w-full object-cover"
+            className="h-full w-full object-cover opacity-90 transition-opacity duration-700 hover:opacity-100"
             draggable={false}
             loading="eager"
           />
@@ -394,16 +395,16 @@ function DefaultFanCard({ item }: { item: CardStackItem; active: boolean }) {
         )}
       </div>
 
-      {/* subtle gradient overlay at bottom for text readability */}
-      <div className="pointer-events-none absolute inset-0 bg-linear-to-t from-black/60 via-transparent to-transparent" />
+      {/* PREMIUM GRADIENT: Deep black at the bottom fading smoothly into transparency */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/95 via-black/30 to-transparent" />
 
       {/* content */}
-      <div className="relative z-10 flex h-full flex-col justify-end p-5">
-        <div className="truncate text-lg font-semibold text-white">
+      <div className="relative z-10 flex h-full flex-col justify-end p-6 md:p-8">
+        <div className="truncate text-2xl md:text-3xl font-serif text-white tracking-tight drop-shadow-md">
           {item.title}
         </div>
         {item.description ? (
-          <div className="mt-1 line-clamp-2 text-sm text-white/80">
+          <div className="mt-2 md:mt-3 line-clamp-3 text-xs md:text-sm text-white/70 leading-relaxed font-light drop-shadow-sm">
             {item.description}
           </div>
         ) : null}

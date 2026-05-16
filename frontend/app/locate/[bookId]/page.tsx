@@ -89,32 +89,34 @@ export default function SpatialLocator() {
         <RetroGrid angle={65} className="text-stone-500" />
       </div>
 
-      <header className="relative z-30 p-6 md:p-8 flex justify-between items-start pointer-events-auto">
+      {/* HEADER - Made more compact for mobile */}
+      <header className="relative z-30 p-4 md:p-8 flex justify-between items-start pointer-events-auto">
         <BlurFade delay={0.1} className="flex-1">
           <button 
             onClick={() => router.back()}
-            className="group flex items-center gap-3 text-stone-500 hover:text-stone-100 transition-colors mb-4 md:mb-6"
+            className="group flex items-center gap-2 md:gap-3 text-stone-500 hover:text-stone-100 transition-colors mb-3 md:mb-6"
           >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            <span className="text-xs font-bold tracking-widest uppercase">Terminate Session</span>
+            <ArrowLeft className="w-4 h-4 md:w-5 md:h-5 group-hover:-translate-x-1 transition-transform" />
+            <span className="text-[10px] md:text-xs font-bold tracking-widest uppercase">Terminate Session</span>
           </button>
           
-          <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
-              <Crosshair className={`w-6 h-6 ${isLoaded ? 'text-emerald-500' : 'text-amber-500 animate-pulse'}`} />
+          <div className="flex items-center gap-3 md:gap-4">
+            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center shrink-0">
+              <Crosshair className={`w-5 h-5 md:w-6 md:h-6 ${isLoaded ? 'text-emerald-500' : 'text-amber-500 animate-pulse'}`} />
             </div>
             <div>
-              <h1 className="text-2xl md:text-3xl font-serif font-medium text-white tracking-tight line-clamp-1">
+              <h1 className="text-xl md:text-3xl font-serif font-medium text-white tracking-tight line-clamp-1">
                 {book ? book.title : "Spatial Guidance"}
               </h1>
-              <p className="text-[10px] md:text-xs font-mono text-stone-500 uppercase tracking-widest mt-1">
+              <p className="text-[9px] md:text-xs font-mono text-stone-500 uppercase tracking-widest mt-0.5 md:mt-1">
                 Target // {book ? book.author : bookId.slice(0, 8)}
               </p>
             </div>
           </div>
         </BlurFade>
 
-        <div className="hidden md:flex gap-4">
+        {/* Status Pill - Hidden on small mobile screens to save space */}
+        <div className="hidden sm:flex gap-4 mt-8 md:mt-0">
           <div className="px-4 py-2 bg-stone-900/50 border border-white/5 rounded-full flex items-center gap-2">
             <div className={`w-1.5 h-1.5 rounded-full ${isLoaded ? 'bg-emerald-500' : 'bg-amber-500 animate-pulse'}`} />
             <span className="text-[10px] font-bold text-stone-400 uppercase tracking-widest">
@@ -124,8 +126,8 @@ export default function SpatialLocator() {
         </div>
       </header>
 
-      {/* EXTENDED CANVAS: Margins reduced to stretch the 3D viewport */}
-      <main className="relative flex-1 z-10 mx-4 mb-4 md:mx-6 md:mb-6 bg-black/40 border border-white/5 rounded-[2rem] overflow-hidden shadow-2xl flex items-center justify-center">
+      {/* EXTENDED CANVAS: Margins dynamically adjust for mobile vs desktop */}
+      <main className="relative flex-1 z-10 mx-3 mb-6 md:mx-6 md:mb-6 bg-black/40 border border-white/5 rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl flex items-center justify-center">
         
         <div className="absolute inset-0 z-0 mix-blend-screen pointer-events-auto">
           <Unity 
@@ -135,32 +137,32 @@ export default function SpatialLocator() {
         </div>
 
         {!isLoaded && (
-          <div className="relative z-10 text-center group cursor-crosshair bg-stone-950/50 backdrop-blur-sm p-12 rounded-3xl border border-white/5">
-            <Layers className="w-12 h-12 text-amber-500 mx-auto mb-4 animate-pulse" />
-            <p className="text-stone-300 font-mono text-xs tracking-[0.4em] uppercase mb-2">Compiling Spatial Data</p>
-            <div className="w-48 h-1 bg-stone-900 mx-auto rounded-full overflow-hidden">
+          <div className="relative z-10 text-center group cursor-crosshair bg-stone-950/50 backdrop-blur-sm p-8 md:p-12 rounded-2xl md:rounded-3xl border border-white/5 mx-4">
+            <Layers className="w-8 h-8 md:w-12 md:h-12 text-amber-500 mx-auto mb-4 animate-pulse" />
+            <p className="text-stone-300 font-mono text-[10px] md:text-xs tracking-[0.2em] md:tracking-[0.4em] uppercase mb-2">Compiling Spatial Data</p>
+            <div className="w-32 md:w-48 h-1 bg-stone-900 mx-auto rounded-full overflow-hidden">
                 <div className="h-full bg-amber-500 transition-all duration-300" style={{ width: `${loadPercent}%` }} />
             </div>
-            <p className="text-amber-500 font-mono text-[10px] mt-3 italic">[ {loadPercent}% ]</p>
+            <p className="text-amber-500 font-mono text-[9px] md:text-[10px] mt-3 italic">[ {loadPercent}% ]</p>
           </div>
         )}
 
-        {/* Floating Interaction Prompt */}
+        {/* Floating Interaction Prompt - Bumped up slightly on mobile for safety */}
         {isLoaded && book && (
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 pointer-events-none z-20 animate-bounce">
-            <div className="bg-stone-950/80 backdrop-blur-md border border-amber-500/30 px-6 py-3 rounded-full shadow-[0_0_30px_rgba(245,158,11,0.2)]">
+          <div className="absolute bottom-10 md:bottom-8 left-1/2 -translate-x-1/2 pointer-events-none z-20 animate-bounce">
+            <div className="bg-stone-950/80 backdrop-blur-md border border-amber-500/30 px-5 py-2 md:px-6 md:py-3 rounded-full shadow-[0_0_30px_rgba(245,158,11,0.2)] whitespace-nowrap">
               <p className="hidden sm:block text-stone-300 text-sm font-mono tracking-widest text-center">
                 PRESS <kbd className="bg-stone-800 border border-stone-600 px-2 py-1 rounded-md text-amber-500 font-bold mx-1 shadow-inner">SPACE</kbd> TO MOVE AGENT
               </p>
-              <p className="block sm:hidden text-stone-300 text-sm font-mono tracking-widest text-center">
-                TAP TO MOVE AGENT
+              <p className="block sm:hidden text-stone-300 text-[10px] font-mono tracking-[0.2em] text-center uppercase font-bold text-amber-500">
+                Tap Center to Move Agent
               </p>
             </div>
           </div>
         )}
 
-        {/* FLOATING HUD: Live Telemetry (Bottom Left) */}
-        <div className="absolute left-6 bottom-6 z-30 pointer-events-none w-[340px] hidden sm:block">
+        {/* FLOATING HUD: Live Telemetry (Bottom Left) - Hidden on mobile */}
+        <div className="absolute left-6 bottom-6 z-30 pointer-events-none w-[340px] hidden md:block">
           <div className="pointer-events-auto bg-stone-900/60 backdrop-blur-xl border border-white/5 p-5 rounded-3xl shadow-2xl">
             <div className="flex items-center gap-2 mb-3">
               <IconTerminal className="w-3 h-3 text-amber-500" />
@@ -185,7 +187,7 @@ export default function SpatialLocator() {
           </div>
         </div>
 
-        {/* FLOATING HUD: System Coordinates (Bottom Right) */}
+        {/* FLOATING HUD: System Coordinates (Bottom Right) - Hidden on mobile */}
         <div className="absolute right-6 bottom-6 z-30 pointer-events-none hidden lg:block">
           <div className="pointer-events-auto bg-stone-900/60 backdrop-blur-xl border border-white/5 p-4 rounded-2xl shadow-xl text-right">
               <p className="text-[10px] font-bold text-stone-500 uppercase tracking-[0.5em]">System Coordinates</p>

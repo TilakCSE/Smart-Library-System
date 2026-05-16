@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   ArrowRight,
@@ -71,6 +71,17 @@ const FEATURED_ITEMS: CardStackItem[] = [
 
 export default function NUVLibraryLanding() {
   const mainRef = useRef<HTMLElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Handle responsive scaling for the 3D Card Stack
+  useEffect(() => {
+    setMounted(true);
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -101,7 +112,6 @@ export default function NUVLibraryLanding() {
       ref={mainRef}
       className="min-h-screen bg-zinc-950 text-zinc-300 font-sans selection:bg-amber-500/30 overflow-x-hidden"
     >
-      {/* FORCE CONTINUOUS ANIMATION ON CARD STACK */}
       <style
         dangerouslySetInnerHTML={{
           __html: `
@@ -111,37 +121,24 @@ export default function NUVLibraryLanding() {
       />
 
       {/* NAVIGATION */}
-      <nav className="fixed top-0 inset-x-0 h-24 z-50 bg-zinc-950/80 backdrop-blur-md border-b border-white/5 flex items-center px-8 md:px-16">
+      <nav className="fixed top-0 inset-x-0 h-20 md:h-24 z-50 bg-zinc-950/80 backdrop-blur-md border-b border-white/5 flex items-center px-6 md:px-16">
         <div className="w-full max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center text-zinc-950">
-              <Library className="w-5 h-5" />
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-white rounded-lg flex items-center justify-center text-zinc-950">
+              <Library className="w-4 h-4 md:w-5 md:h-5" />
             </div>
-            <span className="text-xl font-bold tracking-tight text-white">
-              NUV
-              <span className="text-zinc-500 font-medium italic">Library</span>
+            <span className="text-lg md:text-xl font-bold tracking-tight text-white">
+              NUV<span className="text-zinc-500 font-medium italic">Library</span>
             </span>
           </div>
           <div className="hidden md:flex items-center gap-8 text-xs font-semibold uppercase tracking-widest text-zinc-500">
-            <a href="#featured" className="hover:text-white transition-colors">
-              Featured
-            </a>
-            <a
-              href="#architecture"
-              className="hover:text-white transition-colors"
-            >
-              Architecture
-            </a>
-            <a
-              href="#tech-stack"
-              className="hover:text-white transition-colors"
-            >
-              Tech Stack
-            </a>
+            <a href="#featured" className="hover:text-white transition-colors">Featured</a>
+            <a href="#architecture" className="hover:text-white transition-colors">Architecture</a>
+            <a href="#tech-stack" className="hover:text-white transition-colors">Tech Stack</a>
           </div>
           <Link
             href="/login"
-            className="text-sm font-bold tracking-widest uppercase border-b border-transparent hover:border-amber-500 hover:text-amber-500 transition-colors pb-1"
+            className="text-[10px] md:text-sm font-bold tracking-widest uppercase border-b border-transparent hover:border-amber-500 hover:text-amber-500 transition-colors pb-1"
           >
             Student Login
           </Link>
@@ -149,163 +146,112 @@ export default function NUVLibraryLanding() {
       </nav>
 
       {/* HERO SECTION */}
-      <section className="gsap-3d-section relative pt-48 pb-32 px-8 md:px-16 max-w-7xl mx-auto flex flex-col lg:grid lg:grid-cols-12 gap-16 items-center min-h-screen">
-        <div className="lg:col-span-7 space-y-8 z-10">
+      <section className="gsap-3d-section relative pt-40 md:pt-48 pb-20 md:pb-32 px-6 md:px-16 max-w-7xl mx-auto flex flex-col lg:grid lg:grid-cols-12 gap-12 md:gap-16 items-center min-h-screen">
+        <div className="lg:col-span-7 space-y-6 md:space-y-8 z-10 text-center lg:text-left flex flex-col items-center lg:items-start">
           <BlurFade delay={0.1} inView>
-            <span className="text-xs font-bold tracking-[0.2em] uppercase text-amber-600 mb-6 block flex items-center gap-3">
-              <span className="w-8 h-[1px] bg-amber-600"></span> Next-Gen
-              Library
+            <span className="text-[10px] md:text-xs font-bold tracking-[0.2em] uppercase text-amber-600 mb-4 md:mb-6 flex items-center justify-center lg:justify-start gap-3">
+              <span className="w-8 h-[1px] bg-amber-600"></span> Next-Gen Library
             </span>
-            <h1 className="text-5xl md:text-8xl font-serif text-white tracking-tight leading-[1.05] mb-8">
-              The Archive of <br />
+            <h1 className="text-5xl sm:text-6xl md:text-8xl font-serif text-white tracking-tight leading-[1.05] mb-6 md:mb-8">
+              The Archive of <br className="hidden md:block" />
               <span className="italic text-zinc-500">Human Thought.</span>
             </h1>
-            <p className="text-lg md:text-xl text-zinc-400 max-w-lg leading-relaxed mb-10">
-              Experience a seamless digital catalog integrated with physical
-              space. Find your book, track its live status, and navigate to its
-              exact rack using our interactive WebGL environment.
+            <p className="text-base md:text-xl text-zinc-400 max-w-lg leading-relaxed mb-8 md:mb-10 mx-auto lg:mx-0">
+              Experience a seamless digital catalog integrated with physical space. Find your book, track its live status, and navigate to its exact rack.
             </p>
             <Link
               href="/books"
-              className="group inline-flex items-center gap-4 px-8 py-4 bg-white text-zinc-950 rounded-full font-bold tracking-wide hover:bg-stone-200 transition-colors w-max"
+              className="group inline-flex items-center gap-4 px-6 py-3 md:px-8 md:py-4 bg-white text-zinc-950 rounded-full font-bold text-sm md:text-base tracking-wide hover:bg-stone-200 transition-colors w-max"
             >
-              Explore Archives{" "}
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              Explore Archives <ArrowRight className="w-4 h-4 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" />
             </Link>
           </BlurFade>
         </div>
 
-        <div className="lg:col-span-5 w-full relative">
+        <div className="lg:col-span-5 w-full relative mt-12 lg:mt-0">
           <BlurFade delay={0.3} inView>
-            <div className="relative aspect-[4/3] rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-white">
-              <img
-                src="library.jpeg"
-                alt="NUVLibrary Illustration"
-                className="w-full h-full object-contain"
-              />
+            <div className="relative aspect-[4/3] rounded-2xl md:rounded-[2rem] overflow-hidden shadow-2xl border border-white/10 bg-white">
+              <img src="library.jpeg" alt="NUVLibrary" className="w-full h-full object-contain" />
             </div>
           </BlurFade>
         </div>
       </section>
 
       {/* VELOCITY SCROLL */}
-      <section className="py-20 overflow-hidden bg-zinc-950 border-y border-white/5">
+      <section className="py-12 md:py-20 overflow-hidden bg-zinc-950 border-y border-white/5">
         <ScrollVelocityContainer>
-          <ScrollVelocityRow
-            baseVelocity={1}
-            className="font-serif text-6xl md:text-8xl tracking-tight text-white/5"
-          >
+          <ScrollVelocityRow baseVelocity={1} className="font-serif text-5xl md:text-8xl tracking-tight text-white/5">
             DISCOVER • LEARN • GROW •
           </ScrollVelocityRow>
         </ScrollVelocityContainer>
       </section>
 
-      {/* CURATED ADDITIONS (Shifted Text Left) */}
+      {/* CURATED ADDITIONS */}
       <section
         id="featured"
-        className="gsap-3d-section py-32 relative px-8 md:px-16 max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-16 lg:gap-32 scroll-mt-24"
+        className="gsap-3d-section py-24 md:py-32 relative px-6 md:px-16 max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-12 lg:gap-32 scroll-mt-24"
       >
-        {" "}
-        <div className="max-w-xl lg:-translate-x-12">
-          <h2 className="text-5xl font-serif tracking-tight text-white mb-6 italic">
+        <div className="max-w-xl lg:-translate-x-12 text-center lg:text-left">
+          <h2 className="text-4xl md:text-5xl font-serif tracking-tight text-white mb-6 md:mb-6 italic">
             Curated Additions
           </h2>
-          <p className="text-lg text-zinc-400 leading-relaxed mb-10">
+          <p className="text-sm md:text-lg text-zinc-400 leading-relaxed mb-8 md:mb-10 max-w-sm mx-auto lg:mx-0">
             Swipe through the latest highly-requested volumes currently resting
             on our physical shelves. Updated weekly by our head archivists.
           </p>
           <Link
             href="/books"
-            className="text-xs font-bold tracking-widest uppercase border-b border-amber-500 text-amber-500 pb-1 hover:text-amber-400 transition-colors inline-flex items-center gap-2 group"
+            className="text-[10px] md:text-xs font-bold tracking-widest uppercase border-b border-amber-500 text-amber-500 pb-1 hover:text-amber-400 transition-colors inline-flex items-center gap-2 group"
           >
-            View All Volumes{" "}
-            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            View All Volumes <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
         </div>
-        <div className="flex justify-center w-full md:w-auto h-[500px] items-center card-stack-wrap">
-          <CardStack
-            items={FEATURED_ITEMS}
-            cardWidth={320}
-            cardHeight={460}
-            perspectivePx={1200}
-            autoAdvance={true}
-            intervalMs={2000}
-          />
+
+        <div className="flex justify-center w-full lg:w-auto h-[380px] md:h-[500px] items-center card-stack-wrap mt-8 lg:mt-0">
+          {mounted && (
+            <CardStack
+              items={FEATURED_ITEMS}
+              cardWidth={isMobile ? 260 : 340} // Shrinks on mobile, grows slightly on desktop
+              cardHeight={isMobile ? 380 : 480} // Shrinks on mobile, grows slightly on desktop
+              perspectivePx={1200}
+              autoAdvance={true}
+              intervalMs={3000} // Slowed down slightly for a calmer feel
+            />
+          )}
         </div>
       </section>
 
-      {/* TECH STACK (PREMIUM EDITORIAL LIST - No Cyber Boxes) */}
-      <section
-        id="tech-stack"
-        className="gsap-3d-section py-40 px-8 md:px-16 max-w-5xl mx-auto scroll-mt-24"
-      >
-        <div className="text-center mb-24">
-          <span className="text-[10px] font-bold uppercase tracking-[0.5em] text-zinc-500 block mb-4">
-            Architecture Suite
-          </span>
-          <h2 className="text-5xl md:text-7xl font-serif text-white tracking-tight italic">
-            The Core Stack
-          </h2>
+      {/* TECH STACK */}
+      <section id="tech-stack" className="gsap-3d-section py-24 md:py-40 px-6 md:px-16 max-w-5xl mx-auto scroll-mt-24">
+        <div className="text-center mb-16 md:mb-24">
+          <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.5em] text-zinc-500 block mb-4">Architecture Suite</span>
+          <h2 className="text-4xl md:text-7xl font-serif text-white tracking-tight italic">The Core Stack</h2>
         </div>
 
-        <div className="border-t border-white/10">
+        <div className="border-t border-white/5">
           {[
-            {
-              num: "01",
-              title: "RFID Infrastructure",
-              desc: "Passive RFID tags monitored by Arduino nodes at every rack.",
-              icon: Fingerprint,
-            },
-            {
-              num: "02",
-              title: "3D Digital Twin",
-              desc: "WebGL environment built in Unity and React Three Fiber.",
-              icon: Box,
-            },
-            {
-              num: "03",
-              title: "FastAPI Core",
-              desc: "Asynchronous backend managing real-time hardware interrupts.",
-              icon: Database,
-            },
-            {
-              num: "04",
-              title: "Next.js Interface",
-              desc: "Cinematic UI using Framer Motion for physical interactions.",
-              icon: Code2,
-            },
+            { num: "01", title: "RFID Infrastructure", desc: "Passive RFID tags monitored by Arduino nodes at every rack.", icon: Fingerprint },
+            { num: "02", title: "3D Digital Twin", desc: "WebGL environment built in Unity and React Three Fiber.", icon: Box },
+            { num: "03", title: "FastAPI Core", desc: "Asynchronous backend managing real-time hardware interrupts.", icon: Database },
+            { num: "04", title: "Next.js Interface", desc: "Cinematic UI using Framer Motion for physical interactions.", icon: Code2 },
           ].map((item) => (
-            <div
-              key={item.num}
-              className="group flex flex-col md:flex-row items-start md:items-center justify-between py-12 border-b border-white/10 hover:bg-white/[0.02] transition-colors cursor-default px-6 -mx-6 rounded-2xl"
-            >
-              <div className="flex items-center gap-8 mb-4 md:mb-0">
-                <span className="text-xl font-mono text-zinc-600 group-hover:text-amber-600 transition-colors">
-                  {item.num}
-                </span>
-                <h3 className="text-3xl font-serif text-white group-hover:-translate-y-1 transition-transform">
-                  {item.title}
-                </h3>
+            <div key={item.num} className="group flex flex-col md:flex-row items-start md:items-center justify-between py-8 md:py-12 border-b border-white/5 hover:bg-white/[0.02] transition-colors cursor-default px-6 -mx-6 rounded-3xl">
+              <div className="flex items-center gap-6 md:gap-8 mb-4 md:mb-0">
+                <span className="text-lg md:text-xl font-mono text-zinc-600 group-hover:text-amber-600 transition-colors">{item.num}</span>
+                <h3 className="text-2xl md:text-3xl font-serif text-white group-hover:-translate-y-1 transition-transform">{item.title}</h3>
               </div>
-              <p className="text-zinc-500 text-sm leading-relaxed md:w-1/3">
-                {item.desc}
-              </p>
+              <p className="text-zinc-500 text-xs md:text-sm leading-relaxed md:w-1/3">{item.desc}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* FOOTER */}
-      <footer className="py-20 border-t border-white/5 text-center px-8 bg-[#09090b]">
+      <footer className="py-12 md:py-20 border-t border-white/5 text-center px-8 bg-[#09090b]">
         <div className="flex items-center justify-center gap-3 mb-6">
-          <Library className="w-5 h-5 text-zinc-500" />
-          <span className="text-xl font-bold tracking-tight text-white">
-            NUV<span className="text-zinc-600">Library</span>
-          </span>
+          <Library className="w-4 h-4 md:w-5 md:h-5 text-zinc-500" />
+          <span className="text-lg md:text-xl font-bold tracking-tight text-white">NUV<span className="text-zinc-600">Library</span></span>
         </div>
-        <p className="text-[10px] font-bold uppercase tracking-[0.4em] text-zinc-700">
-          © 2026 NUVLibrary System • SYSTEM INITIATED • v2.0.4
-        </p>
+        <p className="text-[8px] md:text-[10px] font-bold uppercase tracking-[0.4em] text-zinc-700">© 2026 NUVLibrary System • SYSTEM INITIATED • v2.0.4</p>
       </footer>
     </main>
   );
