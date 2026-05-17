@@ -691,3 +691,31 @@ def demo_presentation_seed(session: Session = Depends(get_session)):
 
     session.commit()
     return {"message": "Demo Ready! 20 transactions and 15 search logs injected successfully."}
+
+# --- PHASE 1: STAFF RESTOCKING ENDPOINT ---
+class LocationUpdate(BaseModel):
+    unity_location_id: str
+
+@router.put("/books/{book_id}/update-location")
+def update_book_location(
+    book_id: str, 
+    payload: LocationUpdate, 
+    session: Session = Depends(get_session),
+    # token_data: dict = Depends(verify_token) # Uncomment if you want to secure this route later
+):
+    book = session.get(Book, book_id)
+    if not book:
+        raise HTTPException(status_code=404, detail="Asset not found in Vault")
+    
+    # Update the spatial coordinates
+    book.unity_location_id = payload.unity_location_id
+    
+    session.add(book)
+    session.commit()
+    session.refresh(book)
+    
+    return {
+        "status": "success", 
+        "message": f"'{book.title}' relocated to {book.unity_location_id}",
+        "new_location": book.unity_location_id
+    }
