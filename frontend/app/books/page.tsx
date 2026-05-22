@@ -2,13 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Loader2 } from "lucide-react";
+import { Search, Loader2, AlertTriangle, Unlock, Ban } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 // Firebase & API
 import { auth } from "@/lib/firebase";
-import { fetchFromAPI } from "@/lib/api";
-import { AlertTriangle, Unlock } from "lucide-react"; // Add these to your lucide-react imports
+import { fetchFromAPI } from "@/lib/api";// Add these to your lucide-react imports
 import { useStudentStore } from "@/store/studentStore"; // Import your Zustand store
 // UI Components
 import { TiltCard } from "@/components/TiltCard";
@@ -33,6 +32,7 @@ interface Book {
   description: string;
   cover_image_url: string;
   unity_location_id: string;
+  availableCopies?: number;
 }
 
 // Custom hook to delay API calls while typing
@@ -75,6 +75,23 @@ export default function BooksPage() {
   const { isLocating, locationError, verifyLocation } = useStudentStore();
   const [tapCount, setTapCount] = useState(0);
   const [isGodMode, setIsGodMode] = useState(false);
+
+  const [showReportMenu, setShowReportMenu] = useState(false);
+
+  const handleReportIssue = (reason: string) => {
+    if (!selectedBook) return;
+    const subject = encodeURIComponent(`Library Asset Anomaly: ${selectedBook.title}`);
+    const body = encodeURIComponent(
+      `Hello Library Admin,\n\nI am reporting a spatial anomaly with the following asset:\n\n` +
+      `Asset Title: ${selectedBook.title}\n` +
+      `System ISBN: ${selectedBook.isbn}\n` +
+      `Expected Location: ${selectedBook.unity_location_id.replace(/_/g, " ")}\n\n` +
+      `Anomaly Type: ${reason}\n\n` +
+      `Additional Details:\n[Please type any extra context here...]`
+    );
+    window.location.href = `mailto:library@nuv.ac.in?subject=${subject}&body=${body}`;
+    setShowReportMenu(false);
+  };
 
   const handleSecretTap = () => {
     setTapCount((prev) => {
@@ -233,15 +250,27 @@ export default function BooksPage() {
 
                 {/* --- 2. THE BOOK --- */}
                 <div className="relative z-10 w-[75%] sm:w-[85%] max-w-[140px] sm:max-w-[180px] mb-8 sm:mb-10 cursor-pointer group">
+                  
+                  {/* PHASE 3: Glowing Stock Badges */}
+                  {(book.availableCopies === 0) && (
+                    <div className="absolute -top-3 -right-3 z-40 bg-rose-500/20 backdrop-blur-md text-rose-300 text-[8px] sm:text-[9px] font-bold px-2.5 py-1 rounded-md border border-rose-500/50 shadow-[0_0_15px_rgba(225,29,72,0.6)] tracking-widest pointer-events-none">
+                      OUT OF STOCK
+                    </div>
+                  )}
+                  {(book.availableCopies === 1) && (
+                    <div className="absolute -top-3 -right-3 z-40 bg-amber-500/20 backdrop-blur-md text-amber-300 text-[8px] sm:text-[9px] font-bold px-2.5 py-1 rounded-md border border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.6)] tracking-widest pointer-events-none">
+                      LOW STOCK
+                    </div>
+                  )}
+
                   <BlurFade delay={0.1 + (idx % 10) * 0.05} inView>
                     <TiltCard tiltLimit={10} scale={1.03} spotlight={true}>
                       <motion.div
-                        layoutId={`book-cover-${book.id}`} // <--- THIS IS THE MAGIC KEY
+                        layoutId={`book-cover-${book.id}`}
                         onClick={() => setSelectedBook(book)}
-                        // When selected, we make the shelf version invisible so it looks like it physically left the shelf
                         className={`aspect-[2/3] w-full bg-gradient-to-br ${getBookColor(book.category)} rounded-r-md rounded-l-sm relative overflow-hidden flex flex-col items-center justify-center border-r-[2px] border-l-[1px] border-y-[1px] border-black/50 shadow-[-12px_12px_15px_-3px_rgba(0,0,0,0.5)] transition-all duration-300 group-hover:-translate-y-2 group-hover:shadow-[-18px_18px_20px_-5px_rgba(0,0,0,0.6)] ${
                           selectedBook?.id === book.id ? "opacity-0 pointer-events-none" : "opacity-100"
-                        }`}
+                        } ${book.availableCopies === 0 ? "grayscale-[0.5] brightness-75" : ""}`}
                       >
                         <div className="absolute inset-0 z-0">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -284,7 +313,12 @@ export default function BooksPage() {
       {/* The Sheet component remains exactly as you had it below this line! */}
       <Sheet
         open={!!selectedBook}
-        onOpenChange={(open) => !open && setSelectedBook(null)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setSelectedBook(null);
+            setShowReportMenu(false); // <--- Add this!
+          }
+        }}
       >
         <SheetContent
           side="right"
@@ -339,6 +373,21 @@ export default function BooksPage() {
                     <span className="font-mono text-neutral-300 tracking-widest text-[10px] sm:text-sm">
                       {selectedBook.isbn}
                     </span>
+                    
+                  </div>
+                  <div className="flex justify-between items-center bg-white/5 border border-white/10 p-3 sm:p-4 rounded-xl">
+                    <span className="text-neutral-400 text-xs sm:text-sm">Availability</span>
+                    <span className={`font-mono font-bold px-2 sm:px-3 py-1 sm:py-1.5 rounded-md border text-[10px] sm:text-sm ${
+                      selectedBook.availableCopies === 0 
+                        ? "text-rose-400 bg-rose-400/10 border-rose-400/20" 
+                        : selectedBook.availableCopies === 1
+                        ? "text-amber-400 bg-amber-400/10 border-amber-400/20"
+                        : "text-emerald-400 bg-emerald-400/10 border-emerald-400/20"
+                    }`}>
+                      {selectedBook.availableCopies === 0 
+                        ? "0 Copies Available" 
+                        : `${selectedBook.availableCopies ?? 3} Copies Ready`}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -364,11 +413,20 @@ export default function BooksPage() {
                 </AnimatePresence>
 
                 <button
-                  disabled={isLocating}
+                  disabled={isLocating || selectedBook.availableCopies === 0}
                   onClick={() => handleLocateIn3D(selectedBook.id)}
-                  className="w-full py-3.5 sm:py-4 bg-cyan-600 hover:bg-cyan-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white rounded-xl font-bold tracking-widest transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_30px_rgba(8,145,178,0.3)] hover:shadow-[0_0_40px_rgba(8,145,178,0.5)] disabled:shadow-none flex items-center justify-center gap-2"
+                  className={`w-full py-3.5 sm:py-4 rounded-xl font-bold tracking-widest transition-all flex items-center justify-center gap-2 ${
+                    selectedBook.availableCopies === 0 
+                      ? "bg-neutral-800 text-neutral-500 cursor-not-allowed border border-white/5" 
+                      : "bg-cyan-600 hover:bg-cyan-500 text-white hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_30px_rgba(8,145,178,0.3)] hover:shadow-[0_0_40px_rgba(8,145,178,0.5)]"
+                  }`}
                 >
-                  {isLocating ? (
+                  {selectedBook.availableCopies === 0 ? (
+                    <>
+                      <Ban className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="text-xs sm:text-sm">ASSET UNAVAILABLE</span>
+                    </>
+                  ) : isLocating ? (
                     <>
                       <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
                       <span className="text-xs sm:text-sm">VERIFYING COORDINATES...</span>
@@ -382,6 +440,45 @@ export default function BooksPage() {
                     </>
                   )}
                 </button>
+                <div className="mt-2 flex flex-col items-center">
+                  <button 
+                    onClick={() => setShowReportMenu(!showReportMenu)}
+                    className="text-[10px] sm:text-xs font-bold uppercase tracking-widest text-neutral-500 hover:text-rose-400 transition-colors py-2 flex items-center gap-2"
+                  >
+                    <AlertTriangle className="w-3 h-3 sm:w-4 sm:h-4" /> 
+                    Report Spatial Anomaly
+                  </button>
+
+                  <AnimatePresence>
+                    {showReportMenu && (
+                      <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="w-full mt-3 space-y-2 overflow-hidden"
+                      >
+                        <button 
+                          onClick={() => handleReportIssue("Asset missing from expected shelf location")}
+                          className="w-full text-left p-3 text-xs sm:text-sm bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 rounded-lg border border-rose-500/20 transition-colors"
+                        >
+                          Book is missing from this shelf
+                        </button>
+                        <button 
+                          onClick={() => handleReportIssue("Asset is physically damaged")}
+                          className="w-full text-left p-3 text-xs sm:text-sm bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 rounded-lg border border-amber-500/20 transition-colors"
+                        >
+                          Book is physically damaged
+                        </button>
+                        <button 
+                          onClick={() => handleReportIssue("Incorrect metadata or cover image")}
+                          className="w-full text-left p-3 text-xs sm:text-sm bg-white/5 hover:bg-white/10 text-neutral-300 rounded-lg border border-white/10 transition-colors"
+                        >
+                          Incorrect database information
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
             </>
           )}

@@ -1,11 +1,9 @@
 "use client";
-
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import gsap from "gsap";
 import { Observer } from "gsap/dist/Observer";
 import {
   Search,
-  Plus,
   X,
   BookOpen,
   User,
@@ -15,16 +13,14 @@ import {
   Zap,
   Check,
   RotateCcw,
-  ArrowLeft,
   Loader2,
+  Database,
 } from "lucide-react";
-import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 
 // API & Auth Imports
 import { fetchFromAPI } from "@/lib/api";
 import { auth } from "@/lib/firebase";
-import AdminSidebar from "@/components/AdminSidebar";
 
 if (typeof window !== "undefined") {
   gsap.registerPlugin(Observer);
@@ -36,9 +32,10 @@ interface Book {
   title: string;
   author: string;
   category: string;
-  cover_image_url: string; // Matches your backend field name
-  unity_location_id: string; // Matches your backend field name
+  cover_image_url: string; 
+  unity_location_id: string; 
   isbn: string;
+  availableCopies?: number;
 }
 
 export default function DigitalVault() {
@@ -81,7 +78,7 @@ export default function DigitalVault() {
     );
   }, [books, searchQuery]);
 
-  // NAVIGATION LOGIC
+  // NAVIGATION LOGIC (Safely Clamped)
   const next = () =>
     setActiveIndex((p) => Math.min(filteredBooks.length - 1, p + 1));
   const prev = () => setActiveIndex((p) => Math.max(0, p - 1));
@@ -136,8 +133,9 @@ export default function DigitalVault() {
         scale: isCenter ? 1.25 : 0.8,
         opacity: Math.abs(diff) > 4 ? 0 : isCenter ? 1 : 0.4,
         zIndex: 100 - Math.abs(diff),
-        duration: 0.8,
+        duration: 0.6,
         ease: "expo.out",
+        overwrite: "auto", // <--- THIS FIXES THE RAPID SCROLLING GSAP FREEZE
       });
     });
   }, [activeIndex, filteredBooks]);
@@ -154,11 +152,10 @@ export default function DigitalVault() {
   }
 
   return (
-    // REMOVED <AdminSidebar /> and the extra wrappers! The layout.tsx handles that now.
     <main className="p-4 md:p-12 relative z-10 overflow-hidden h-[calc(100vh-4rem)] md:h-screen text-slate-200">
       <div className="max-w-[1600px] mx-auto relative h-full flex flex-col">
         
-        {/* FIXED RESPONSIVE HEADER: flex-col on mobile, flex-row on desktop */}
+        {/* HEADER */}
         <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6 md:mb-10">
           <h2 className="text-xl md:text-2xl font-bold text-white tracking-widest uppercase">
             Vault Inventory
@@ -170,8 +167,8 @@ export default function DigitalVault() {
               <input
                 type="text"
                 placeholder="Search Title or ISBN..."
-                value={searchQuery} // <-- Moved the state here!
-                onChange={(e) => setSearchQuery(e.target.value)} // <-- Moved the logic here!
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-neutral-900 border border-white/10 rounded-xl py-2.5 pl-10 pr-4 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-500 transition-all"
               />
             </div>
@@ -183,7 +180,6 @@ export default function DigitalVault() {
             </button>
           </div>
         </header>
-
 
         {/* 3D Carousel Section */}
         <section className="relative flex-1 w-full flex items-center justify-center perspective-[2500px]">
@@ -208,14 +204,33 @@ export default function DigitalVault() {
         {/* Selected Book Info */}
         <div className="mt-4 md:mt-8 text-center relative z-50 pb-4 md:pb-8">
           <AnimatePresence mode="wait">
-            <motion.div key={activeIndex} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
+            <motion.div 
+              key={activeIndex} 
+              initial={{ opacity: 0, y: 5 }} 
+              animate={{ opacity: 1, y: 0 }} 
+              exit={{ opacity: 0, y: -5 }}
+              transition={{ duration: 0.1 }} // <--- THIS FIXES THE FRAMER MOTION QUEUE FREEZE
+            >
               <h2 className="text-2xl sm:text-3xl md:text-5xl font-serif text-white mb-3 md:mb-4 tracking-tight drop-shadow-2xl px-4 line-clamp-2">
-                {filteredBooks[activeIndex]?.title || "Asset Selected"}
+                {filteredBooks[activeIndex]?.title || "Unknown Asset"}
               </h2>
               <div className="flex flex-wrap items-center justify-center gap-4 md:gap-8 text-[9px] md:text-[10px] font-mono text-slate-500 uppercase tracking-[0.2em] md:tracking-[0.4em]">
-                <span className="flex items-center gap-2"><User className="w-3 h-3" /> {filteredBooks[activeIndex]?.author}</span>
+                <span className="flex items-center gap-2"><User className="w-3 h-3" /> {filteredBooks[activeIndex]?.author || "Unknown"}</span>
                 <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
-                <span className="text-blue-400 flex items-center gap-2 font-bold"><MapPin className="w-3 h-3" /> {filteredBooks[activeIndex]?.unity_location_id}</span>
+                <span className="text-blue-400 flex items-center gap-2 font-bold"><MapPin className="w-3 h-3" /> {filteredBooks[activeIndex]?.unity_location_id || "Unmapped"}</span>
+                
+                {/* PHASE 3: Admin Stock Badge */}
+                <div className="hidden sm:block w-1.5 h-1.5 rounded-full bg-slate-600" />
+                <span className={`flex items-center gap-2 font-bold ${
+                  filteredBooks[activeIndex]?.availableCopies === 0 ? "text-rose-500 bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20" : 
+                  filteredBooks[activeIndex]?.availableCopies === 1 ? "text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20" : 
+                  "text-emerald-500"
+                }`}>
+                  <Database className="w-3 h-3" /> 
+                  {filteredBooks[activeIndex]?.availableCopies === 0 ? "OUT OF STOCK" : 
+                   filteredBooks[activeIndex]?.availableCopies === 1 ? "LOW STOCK" : 
+                   "IN STOCK"}
+                </span>
               </div>
             </motion.div>
           </AnimatePresence>
@@ -229,8 +244,7 @@ export default function DigitalVault() {
   );
 }
 
-// --- UPDATED MODAL COMPONENT ---
-
+// --- ADD BOOK MODAL ---
 function AddBookModal({
   onClose,
   onAdd,
@@ -261,7 +275,6 @@ function AddBookModal({
       const user = auth.currentUser;
       const token = user ? await user.getIdToken() : "";
 
-      // CALL YOUR BACKEND: POST /api/v1/books/add
       await fetchFromAPI("/api/v1/books/add", {
         method: "POST",
         headers: {

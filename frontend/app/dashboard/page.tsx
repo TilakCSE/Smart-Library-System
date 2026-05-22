@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import { 
   BookOpen, Clock, AlertTriangle, Loader2, LogOut, 
-  Search, Bookmark, Sparkles, TrendingUp 
+  Search, Bookmark, Sparkles, TrendingUp, Settings, Moon, Bell, X 
 } from "lucide-react";
-import { useStudentStore } from "@/store/studentStore"; // Adjust path if needed
+import { useStudentStore } from "@/store/studentStore"; 
 
 import DigitalID from "@/components/DigitalID";
 import { MagicCard } from "@/components/ui/magic-card";
@@ -24,14 +24,41 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [greeting, setGreeting] = useState("Good Afternoon");
   const [dashboardData, setDashboardData] = useState<any>(null);
+  
+  // Settings & PWA State
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
 
-  const handleSpatialLaunch = () => {
-    // Instant redirect to the catalog/map. 
-    // The actual /books page will handle any strict geolocation needed!
-    router.push("/books"); 
+  // --- PHASE 5: PUSH NOTIFICATION LOGIC ---
+  const handleNotificationToggle = async () => {
+    if (!("Notification" in window)) {
+      alert("This browser does not support desktop push notifications.");
+      return;
+    }
+
+    if (notificationsEnabled) {
+      setNotificationsEnabled(false);
+      // Logic to remove sub from DB would go here
+    } else {
+      const permission = await Notification.requestPermission();
+      
+      if (permission === "granted") {
+        setNotificationsEnabled(true);
+        // Fire a native test notification!
+        new Notification("SmartOS Notifications Enabled", {
+          body: "You will now receive alerts for due dates and pending fines.",
+          icon: "https://www.svgrepo.com/show/305141/library.svg",
+        });
+      } else {
+        alert("Permission denied. Please enable notifications in your browser settings.");
+        setNotificationsEnabled(false);
+      }
+    }
   };
 
-    
+  const handleSpatialLaunch = () => {
+    router.push("/books"); 
+  };
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -84,17 +111,23 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-[#09090b] text-neutral-300 p-6 md:p-12 font-sans selection:bg-cyan-500/30">
       
       {/* --- TOP BAR --- */}
-      <header className="max-w-[1600px] mx-auto flex justify-end items-center mb-8 md:mb-12">
-        <div className="flex items-center gap-4">
+      <header className="max-w-[1600px] mx-auto flex justify-end items-center mb-8 md:mb-12 relative z-10">
+        <div className="flex items-center gap-3 md:gap-4">
           <div className="text-right hidden md:block">
-            <p 
-              className="text-neutral-500 text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:text-cyan-500 transition-colors select-none"
-            >
+            <p className="text-neutral-500 text-[10px] font-bold uppercase tracking-widest cursor-pointer hover:text-cyan-500 transition-colors select-none">
               {greeting}
             </p>
             <p className="text-sm font-bold text-white capitalize">{dashboardData?.full_name || "Student"}</p>
           </div>
-          <button onClick={handleLogout} className="h-10 w-10 md:h-12 md:w-12 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center hover:bg-rose-500/10 hover:text-rose-400 transition-all group shadow-sm">
+          
+          <button 
+            onClick={() => setIsSettingsOpen(true)} 
+            className="h-10 w-10 md:h-12 md:w-12 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center hover:bg-white/10 text-neutral-400 hover:text-white transition-all shadow-sm group"
+          >
+            <Settings className="w-4 h-4 md:w-5 md:h-5 group-hover:rotate-90 transition-transform duration-500" />
+          </button>
+
+          <button onClick={handleLogout} className="h-10 w-10 md:h-12 md:w-12 rounded-2xl bg-neutral-900 border border-white/5 flex items-center justify-center hover:bg-rose-500/10 text-neutral-400 hover:text-rose-400 transition-all shadow-sm group">
             <LogOut className="w-4 h-4 md:w-5 md:h-5 group-hover:-translate-x-1 transition-transform" />
           </button>
         </div>
@@ -123,7 +156,6 @@ export default function DashboardPage() {
                 <NumberTicker value={dashboardData?.fines || 0} />
               </div>
 
-              {/* NEW: Detailed Fine Breakdown */}
               {dashboardData?.fine_details?.length > 0 && (
                 <div className="mt-4 pt-4 border-t border-white/5 space-y-2">
                   <p className="text-[9px] text-neutral-500 uppercase tracking-widest font-bold mb-2">Accrual Breakdown</p>
@@ -138,7 +170,6 @@ export default function DashboardPage() {
             </MagicCard>
           </div>
 
-          {/* NEW: READING INSIGHTS COMPONENT */}
           <MagicCard className="bg-neutral-900/40 p-8 border border-white/5 rounded-[2.5rem] overflow-hidden" gradientColor="rgba(37, 99, 235, 0.05)">
             <div className="flex justify-between items-center mb-6">
               <h3 className="font-bold text-white tracking-[0.2em] uppercase text-[10px]">Reading Activity</h3>
@@ -193,8 +224,7 @@ export default function DashboardPage() {
             </div>
           </MagicCard>
 
-          {/* NEW: RESERVED ASSETS GRID (Fills the bottom) */}
-          {/* NEW: SMART RECOMMENDATIONS GRID */}
+          {/* SMART RECOMMENDATIONS GRID */}
           <div className="md:col-span-2">
             <MagicCard className="bg-neutral-900/40 p-8 border border-white/5 rounded-[2.5rem] flex flex-col" gradientColor="rgba(255, 255, 255, 0.02)">
               
@@ -203,7 +233,6 @@ export default function DashboardPage() {
                   <Sparkles className="w-4 h-4 text-cyan-500" /> Recommended For You
                 </h3>
                 <div className="flex items-center gap-2">
-                  
                   <span className="text-[9px] text-neutral-500 font-mono uppercase tracking-widest">Powered by AI</span>
                   <div className="w-2 h-2 rounded-full bg-cyan-500 animate-pulse" />
                 </div>
@@ -228,9 +257,73 @@ export default function DashboardPage() {
               </div>
             </MagicCard>
           </div>
-
         </div>
       </main>
+
+      {/* --- STUDENT SETTINGS MODAL --- */}
+      <AnimatePresence>
+        {isSettingsOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setIsSettingsOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md bg-[#0c0a09] border border-white/10 rounded-3xl shadow-2xl overflow-hidden p-6 md:p-8"
+            >
+              <div className="flex justify-between items-center mb-8">
+                <div>
+                  <h3 className="text-2xl font-serif text-white tracking-tight">Preferences</h3>
+                  <p className="text-[10px] font-mono uppercase tracking-[0.2em] text-neutral-500 mt-1">SmartOS Configuration</p>
+                </div>
+                <button onClick={() => setIsSettingsOpen(false)} className="p-2 bg-white/5 rounded-full text-neutral-400 hover:text-white transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Notification Toggle - PHASE 5 */}
+                <div className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-cyan-500/10 rounded-lg text-cyan-400"><Bell className="w-4 h-4 md:w-5 md:h-5" /></div>
+                    <div>
+                      <p className="font-bold text-white text-sm">Push Notifications</p>
+                      <p className="text-[10px] md:text-xs text-neutral-500 mt-0.5">Alerts for pending fines and due dates.</p>
+                    </div>
+                  </div>
+                  <button onClick={handleNotificationToggle} className={`w-11 h-6 rounded-full transition-colors relative shrink-0 ${notificationsEnabled ? 'bg-cyan-500' : 'bg-neutral-700'}`}>
+                    <div className={`w-4 h-4 bg-white rounded-full absolute top-1 transition-transform ${notificationsEnabled ? 'left-6' : 'left-1'}`} />
+                  </button>
+                </div>
+
+                {/* Dark Mode (Locked) */}
+                <div className="flex items-center justify-between p-4 bg-white/5 border border-white/5 rounded-2xl opacity-60 cursor-not-allowed">
+                  <div className="flex items-center gap-4">
+                    <div className="p-2 bg-indigo-500/10 rounded-lg text-indigo-400"><Moon className="w-4 h-4 md:w-5 md:h-5" /></div>
+                    <div>
+                      <p className="font-bold text-white text-sm">Cinematic Theme</p>
+                      <p className="text-[10px] md:text-xs text-neutral-500 mt-0.5">Locked by system administrator.</p>
+                    </div>
+                  </div>
+                  <button disabled className="w-11 h-6 rounded-full bg-indigo-500 relative shrink-0">
+                    <div className="w-4 h-4 bg-white rounded-full absolute top-1 left-6" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-8 pt-6 border-t border-white/5 text-center">
+                <p className="text-[9px] font-mono uppercase tracking-[0.4em] text-neutral-600">SmartOS Core v2.0.4</p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }
